@@ -826,12 +826,10 @@ export default function App() {
   const recognitionRef = useRef(null)
   const voiceBaseRef = useRef('')
   const voiceFinalRef = useRef('')
-  const voiceAutoSendRef = useRef(false)
   const requestController = useRef(null)
 
   useEffect(
     () => () => {
-      voiceAutoSendRef.current = false
       recognitionRef.current?.abort()
       recognitionRef.current = null
     },
@@ -1139,14 +1137,13 @@ export default function App() {
       recognitionRef.current = recognition
       voiceBaseRef.current = input
       voiceFinalRef.current = ''
-      voiceAutoSendRef.current = true
       recognition.lang = navigator.languages?.[0] || navigator.language || 'en-US'
       recognition.continuous = false
       recognition.interimResults = true
       recognition.maxAlternatives = 1
       recognition.onstart = () => {
         setListening(true)
-        showToast('Listening… your message sends when you finish speaking', 2800)
+        showToast('Listening… your words will appear in the message box', 2800)
       }
       recognition.onresult = (event) => {
         let interimTranscript = ''
@@ -1164,7 +1161,6 @@ export default function App() {
         setInput([voiceBaseRef.current, transcript].filter(Boolean).join(voiceBaseRef.current && transcript ? ' ' : ''))
       }
       recognition.onerror = (event) => {
-        voiceAutoSendRef.current = false
         const messages = {
           'not-allowed': 'Allow microphone access in browser settings',
           'service-not-allowed': 'Speech recognition service is unavailable',
@@ -1177,16 +1173,16 @@ export default function App() {
       recognition.onend = () => {
         const transcript = voiceFinalRef.current
         const prompt = [voiceBaseRef.current, transcript].filter(Boolean).join(voiceBaseRef.current && transcript ? ' ' : '')
-        const shouldSend = voiceAutoSendRef.current && Boolean(transcript)
-        voiceAutoSendRef.current = false
         if (transcript) setInput(prompt)
         recognitionRef.current = null
         setListening(false)
-        if (shouldSend) void submit(prompt)
+        if (transcript) {
+          inputRef.current?.focus()
+          showToast('Voice text added. Press Enter to send.')
+        }
       }
       recognition.start()
     } catch {
-      voiceAutoSendRef.current = false
       recognitionRef.current = null
       setListening(false)
       showToast('Could not start microphone. Check its browser permission')
