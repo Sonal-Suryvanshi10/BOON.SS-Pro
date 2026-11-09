@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ArrowUpRight,
+  Archive,
+  ArchiveRestore,
   BookOpen,
   Check,
   Copy,
@@ -14,6 +16,7 @@ import {
   Menu,
   Mic,
   MoreHorizontal,
+  LogOut,
   Paperclip,
   Plus,
   RefreshCw,
@@ -23,12 +26,14 @@ import {
   Square,
   Trash2,
   Pencil,
+  RotateCcw,
   Search,
   Send,
   Sparkles,
   X,
 } from 'lucide-react'
 import './App.css'
+import './ProfileMenu.css'
 import askAi from './AskAi.js'
 
 const icons = {
@@ -65,6 +70,15 @@ function formatReply(raw) {
     return [reply.greeting, reply.heading, reply.answer].filter(Boolean).join('\n\n')
   } catch {
     return raw
+  }
+}
+
+function loadGuestSessions() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('boon-demo-sessions') || '[]')
+    return Array.isArray(stored) ? stored.filter((session) => session && typeof session.id === 'string') : []
+  } catch {
+    return []
   }
 }
 
@@ -107,9 +121,22 @@ function Sidebar({
   saved,
   visibleSessions,
   openSession,
+  activeSessionId,
+  sessionView,
+  setSessionView,
+  profileMenuOpen,
+  setProfileMenuOpen,
+  canArchiveCurrent,
+  onArchiveCurrent,
+  onMoveToTrash,
+  onRestoreSession,
+  onPermanentDelete,
+  onLogout,
+  onGoHome,
+  onEditProfile,
+  onOpenLogin,
   submit,
   authUser,
-  onLogin,
 }) {
   return (
     <>
@@ -177,7 +204,7 @@ function Sidebar({
         </button>
 
         <div className="side-label recents-label">
-          {showSaved ? 'SAVED PROMPTS' : 'RECENT CHATS'}
+          {showSaved ? 'SAVED PROMPTS' : sessionView === 'trash' ? 'TRASH' : sessionView === 'archived' ? 'ARCHIVED CHATS' : 'RECENT CHATS'}
         </div>
         <div className="recent-list">
           {showSaved ? (
@@ -200,16 +227,32 @@ function Sidebar({
             )
           ) : visibleSessions.length ? (
             visibleSessions.map((session) => (
-              <button
-                className="recent-chat"
-                key={session.id}
-                onClick={() => openSession(session)}
-              >
-                <span className="recent-dot" />
-                <span>{session.title}</span>
-              </button>
+              <div className="recent-session" key={session.id}>
+                <button
+                  className={`recent-chat ${sessionView === 'active' && session.id === activeSessionId ? 'recent-chat-active' : ''}`}
+                  onClick={() => openSession(session)}
+                >
+                  <span className="recent-dot" />
+                  <span>{session.title}</span>
+                </button>
+                {sessionView === 'trash' ? (
+                  <>
+                    <button className="session-action" onClick={() => onRestoreSession(session)} aria-label={`Restore ${session.title}`} title="Restore chat"><RotateCcw size={14}/></button>
+                    <button className="session-action session-action-danger" onClick={() => onPermanentDelete(session)} aria-label={`Permanently delete ${session.title}`} title="Delete permanently"><Trash2 size={14}/></button>
+                  </>
+                ) : sessionView === 'archived' ? (
+                  <>
+                    <button className="session-action" onClick={() => onRestoreSession(session)} aria-label={`Unarchive ${session.title}`} title="Move to recent chats"><ArchiveRestore size={14}/></button>
+                    {authUser && <button className="session-action session-action-danger" onClick={() => onMoveToTrash(session)} aria-label={`Move ${session.title} to trash`} title="Move to trash"><Trash2 size={14}/></button>}
+                  </>
+                ) : authUser ? (
+                  <button className="session-action session-action-danger" onClick={() => onMoveToTrash(session)} aria-label={`Move ${session.title} to trash`} title="Move to trash"><Trash2 size={14}/></button>
+                ) : null}
+              </div>
             ))
-          ) : null}
+          ) : (
+            <span className="empty-note">{sessionView === 'trash' ? 'Trash is empty.' : sessionView === 'archived' ? 'No archived chats yet.' : 'Your recent chats will show here.'}</span>
+          )}
         </div>
 
         <div className="sidebar-footer">
@@ -223,18 +266,32 @@ function Sidebar({
             </span>
             <Icon name="arrow" size={14} />
           </div>
-          <button className="user-card" onClick={onLogin}>
-            <span className="user-avatar">{authUser?.email?.[0]?.toUpperCase() || 'S'}</span>
-            <span><b>{authUser?.email || 'Sign in'}</b><small>{authUser ? 'Cloud synced workspace' : 'Sync chats across devices'}</small></span>
-            <Icon name="more" size={17} />
-          </button>
+          <div className="profile-controls">
+            <button className="user-card" onClick={authUser ? undefined : onOpenLogin}>
+              <span className="user-avatar">{(authUser?.displayName || authUser?.email)?.[0]?.toUpperCase() || 'S'}</span>
+              <span><b>{authUser?.displayName || authUser?.email || 'Demo mode'}</b><small>{authUser ? 'Cloud synced workspace' : 'Guest chat archive'}</small></span>
+            </button>
+            <button className="profile-menu-trigger" aria-label="Profile options" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((open) => !open)}><Icon name="more" size={18}/></button>
+          </div>
+          {profileMenuOpen && (
+            <div className="profile-menu" role="menu">
+              {canArchiveCurrent && <button role="menuitem" onClick={onArchiveCurrent}><Archive size={15}/> Archive current chat</button>}
+              <button role="menuitem" onClick={() => { setSessionView(sessionView === 'archived' ? 'active' : 'archived'); setProfileMenuOpen(false); setShowSaved(false) }}><ArchiveRestore size={15}/>{sessionView === 'archived' ? 'Recent chats' : 'Archived chats'}</button>
+              {authUser && <>
+                <button role="menuitem" onClick={onEditProfile}><Pencil size={15}/> Update display name</button>
+                <button role="menuitem" onClick={() => { setSessionView(sessionView === 'trash' ? 'active' : 'trash'); setProfileMenuOpen(false); setShowSaved(false) }}><Trash2 size={15}/>{sessionView === 'trash' ? 'Recent chats' : 'Trash'}</button>
+                <button role="menuitem" onClick={onGoHome}><HomeIcon size={15}/> Go to home page</button>
+                <button role="menuitem" className="profile-menu-danger" onClick={onLogout}><LogOut size={15}/> Log out</button>
+              </>}
+            </div>
+          )}
         </div>
       </aside>
     </>
   )
 }
 
-function Header({ messages, chatTitle, setDrawer }) {
+function Header({ messages, chatTitle, setDrawer, onArchive, onGoHome, canArchiveCurrent }) {
   return (
     <header className="topbar">
       <div className="top-left">
@@ -255,6 +312,8 @@ function Header({ messages, chatTitle, setDrawer }) {
       </div>
 
       <div className="top-actions">
+        <button className="header-action" onClick={onGoHome} title="Go to home page"><HomeIcon size={15}/><span>Home</span></button>
+        {canArchiveCurrent && <button className="header-action" onClick={onArchive} title="Archive this chat"><Archive size={15}/><span>Archive</span></button>}
         <span className="online">
           <i />
           Ready to explore
@@ -669,6 +728,12 @@ export default function App() {
   const [imageAttachment, setImageAttachment] = useState(null)
   const [speaking, setSpeaking] = useState(false)
   const [auth, setAuth] = useState(() => { try { return JSON.parse(localStorage.getItem('boon-auth') || 'null') } catch { return null } })
+  const [sessionView, setSessionView] = useState('active')
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [profileNameOpen, setProfileNameOpen] = useState(false)
+  const [profileNameDraft, setProfileNameDraft] = useState('')
+  const [profileNameBusy, setProfileNameBusy] = useState(false)
+  const [profileNameError, setProfileNameError] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
   const [authEmail, setAuthEmail] = useState('')
@@ -679,7 +744,9 @@ export default function App() {
   const [editValue, setEditValue] = useState('')
   const [editingMessage, setEditingMessage] = useState(null)
   const [activeSessionId, setActiveSessionId] = useState(null)
-  const [sessions, setSessions] = useState([])
+  const [sessions, setSessions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('boon-auth') || 'null') ? [] : loadGuestSessions() } catch { return loadGuestSessions() }
+  })
 
   const area = useRef(null)
   const inputRef = useRef(null)
@@ -700,15 +767,14 @@ export default function App() {
     [],
   )
 
-  // Guest sessions exist only in memory. Persistent chat history belongs to MongoDB accounts.
-  useEffect(() => { if (!auth) localStorage.removeItem('orbit-sessions') }, [auth])
+  useEffect(() => { if (!auth) localStorage.setItem('boon-demo-sessions', JSON.stringify(sessions)) }, [auth, sessions])
   useEffect(() => { if (auth) localStorage.setItem('boon-auth', JSON.stringify(auth)); else localStorage.removeItem('boon-auth') }, [auth])
   useEffect(() => {
     if (!auth?.token) return
     let cancelled = false
     fetch('/api/chats', { headers: { Authorization: `Bearer ${auth.token}` } })
       .then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error); return body })
-      .then(({ chats }) => { if (!cancelled) setSessions(chats.slice(0, 100)) })
+      .then(({ chats }) => { if (!cancelled) setSessions(chats.slice(0, 100).map((chat) => ({ status: 'active', ...chat }))) })
       .catch((error) => { if (!cancelled) showToast(error.message, 3000) })
     return () => { cancelled = true }
   }, [auth?.token])
@@ -725,7 +791,7 @@ export default function App() {
   useEffect(() => {
     if (!messages.length || !activeSessionId) return
     const title = messages.find((message) => message.role === 'user')?.text?.split('\n')[0]?.slice(0, 34) || 'New conversation'
-    setSessions((all) => [{ id: activeSessionId, title, messages }, ...all.filter((session) => session.id !== activeSessionId)].slice(0, 100))
+    setSessions((all) => [{ id: activeSessionId, title, messages, status: all.find((session) => session.id === activeSessionId)?.status || 'active' }, ...all.filter((session) => session.id !== activeSessionId)].slice(0, 100))
   }, [messages, activeSessionId])
 
   useEffect(() => {
@@ -743,7 +809,7 @@ export default function App() {
     messages.find((message) => message.role === 'user')?.text?.split('\n')[0]?.slice(0, 34) ||
     'New conversation'
   const visibleSessions = sessions.filter((session) =>
-    session.title.toLowerCase().includes(query.toLowerCase()),
+    (session.status || 'active') === sessionView && session.title.toLowerCase().includes(query.toLowerCase()),
   )
 
   function showToast(message, duration = 1800) {
@@ -759,15 +825,146 @@ export default function App() {
     setActiveSessionId(null)
     setMessages([])
     setInput('')
+    setSessionView('active')
+    setProfileMenuOpen(false)
     setDrawer(false)
   }
 
   function openSession(session) {
-    if (!auth) return
     if (!sessions.some((item) => item.id === session.id)) return
+    if (session.status === 'trash') return
+    if (session.status === 'archived') void setSessionStatus(session, 'active')
+    setSessionView('active')
     setActiveSessionId(session.id)
     setMessages(session.messages)
     setDrawer(false)
+  }
+
+  async function setSessionStatus(session, status) {
+    if (auth?.token) {
+      try {
+        const response = await fetch(`/api/chats/${encodeURIComponent(session.id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+          body: JSON.stringify({ status }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Could not update this chat.')
+      } catch (error) {
+        showToast(error.message || 'Could not update this chat.', 3000)
+        return false
+      }
+    }
+    setSessions((all) => all.map((item) => item.id === session.id ? { ...item, status } : item))
+    return true
+  }
+
+  async function archiveCurrentChat() {
+    if (!messages.length) return
+    const id = activeSessionId || String(Date.now())
+    const title = messages.find((message) => message.role === 'user')?.text?.split('\n')[0]?.slice(0, 34) || 'New conversation'
+    const session = { id, title, messages, status: 'archived' }
+    if (auth?.token) {
+      try {
+        const response = await fetch(`/api/chats/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+          body: JSON.stringify(session),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Could not archive this chat.')
+      } catch (error) {
+        showToast(error.message || 'Could not archive this chat.', 3000)
+        return
+      }
+    }
+    setSessions((all) => [session, ...all.filter((item) => item.id !== id)].slice(0, 100))
+    setActiveSessionId(null)
+    setMessages([])
+    setInput('')
+    setSessionView('archived')
+    setProfileMenuOpen(false)
+    setDrawer(false)
+    showToast('Chat archived')
+  }
+
+  async function moveSessionToTrash(session) {
+    if (!auth) return
+    if (await setSessionStatus(session, 'trash')) {
+      if (activeSessionId === session.id) { setActiveSessionId(null); setMessages([]); setInput('') }
+      showToast('Chat moved to trash')
+    }
+  }
+
+  async function restoreSession(session) {
+    if (await setSessionStatus(session, 'active')) showToast('Chat restored')
+  }
+
+  async function permanentlyDeleteSession(session) {
+    if (!auth?.token) return
+    try {
+      const response = await fetch(`/api/chats/${encodeURIComponent(session.id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${auth.token}` },
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not permanently delete this chat.')
+      setSessions((all) => all.filter((item) => item.id !== session.id))
+      if (activeSessionId === session.id) { setActiveSessionId(null); setMessages([]); setInput('') }
+      showToast('Chat permanently deleted')
+    } catch (error) {
+      showToast(error.message || 'Could not permanently delete this chat.', 3000)
+    }
+  }
+
+  function goToHome() {
+    setShowLanding(true)
+    setDrawer(false)
+    setProfileMenuOpen(false)
+  }
+
+  function openProfileNameEditor() {
+    setProfileNameDraft(auth?.user?.displayName || '')
+    setProfileNameError('')
+    setProfileNameOpen(true)
+    setProfileMenuOpen(false)
+  }
+
+  async function saveProfileName(event) {
+    event.preventDefault()
+    if (!auth?.token) return
+    setProfileNameBusy(true)
+    setProfileNameError('')
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+        body: JSON.stringify({ displayName: profileNameDraft }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not update your profile name.')
+      setAuth((current) => ({ ...current, user: { ...current.user, displayName: result.displayName } }))
+      setProfileNameOpen(false)
+      showToast('Profile name updated')
+    } catch (error) {
+      setProfileNameError(error.message || 'Could not update your profile name.')
+    } finally {
+      setProfileNameBusy(false)
+    }
+  }
+
+  function logout() {
+    setAuth(null)
+    setSessions(loadGuestSessions())
+    setSessionView('active')
+    setMessages([])
+    setActiveSessionId(null)
+    setInput('')
+    setShowSaved(false)
+    setProfileMenuOpen(false)
+    setDrawer(false)
+    setShowLanding(true)
+    showToast('Logged out')
   }
 
   function savePrompt(text) {
@@ -1008,7 +1205,7 @@ export default function App() {
       const response = await fetch(`/api/auth/${authMode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: authEmail, password: authPassword }) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not sign in')
-      setAuth(result); setAuthOpen(false); setAuthPassword(''); setMessages([]); setActiveSessionId(null); showToast('Cloud chat sync is on')
+      setAuth(result); setSessions([]); setSessionView('active'); setProfileMenuOpen(false); setAuthOpen(false); setAuthPassword(''); setMessages([]); setActiveSessionId(null); showToast('Cloud chat sync is on')
       setGuestUsage(0); localStorage.removeItem('boon-guest-usage')
     } catch (error) { setAuthError(error.message) } finally { setAuthBusy(false) }
   }
@@ -1036,13 +1233,26 @@ export default function App() {
         saved={saved}
         visibleSessions={visibleSessions}
         openSession={openSession}
+        activeSessionId={activeSessionId}
+        sessionView={sessionView}
+        setSessionView={(view) => { setSessionView(view); setProfileMenuOpen(false) }}
+        profileMenuOpen={profileMenuOpen}
+        setProfileMenuOpen={setProfileMenuOpen}
+        canArchiveCurrent={messages.length > 0}
+        onArchiveCurrent={archiveCurrentChat}
+        onMoveToTrash={moveSessionToTrash}
+        onRestoreSession={restoreSession}
+        onPermanentDelete={permanentlyDeleteSession}
+        onLogout={logout}
+        onGoHome={goToHome}
+        onEditProfile={openProfileNameEditor}
+        onOpenLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }}
         submit={submit}
         authUser={auth?.user}
-        onLogin={() => { if (auth) { localStorage.removeItem('orbit-sessions'); setAuth(null); setSessions([]); setMessages([]); setActiveSessionId(null); setInput(''); setShowSaved(false); setDrawer(false); setShowLanding(true); showToast('Signed out') } else { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) } }}
       />
 
       <main className="main-panel">
-        <Header messages={messages} chatTitle={chatTitle} setDrawer={setDrawer} />
+        <Header messages={messages} chatTitle={chatTitle} setDrawer={setDrawer} onArchive={archiveCurrentChat} onGoHome={goToHome} canArchiveCurrent={messages.length > 0} />
         <Conversation
           messages={messages}
           busy={busy}
@@ -1078,6 +1288,21 @@ export default function App() {
           setImageAttachment={setImageAttachment}
         />
       </main>
+
+      {profileNameOpen && (
+        <div className="auth-overlay" onClick={() => setProfileNameOpen(false)}>
+          <form className="auth-card profile-name-card" onSubmit={saveProfileName} onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="auth-close" aria-label="Close" onClick={() => setProfileNameOpen(false)}>×</button>
+            <div className="auth-kicker">YOUR PROFILE</div>
+            <h2>Choose your name.</h2>
+            <p>This name appears in your BOON.SS profile.</p>
+            <label htmlFor="profile-display-name">Display name</label>
+            <input id="profile-display-name" name="displayName" maxLength="60" required value={profileNameDraft} onChange={(event) => setProfileNameDraft(event.target.value)} />
+            {profileNameError && <div className="auth-error">{profileNameError}</div>}
+            <button className="auth-submit" disabled={profileNameBusy}>{profileNameBusy ? 'Saving…' : 'Save name ↗'}</button>
+          </form>
+        </div>
+      )}
 
       {authOpen && (
         <div className="auth-overlay" onClick={() => setAuthOpen(false)}>

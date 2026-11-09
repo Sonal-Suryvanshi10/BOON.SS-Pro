@@ -50,7 +50,7 @@ Keep backend credentials in the host's secret settings or local `.env`; never ex
 
 ## MongoDB and accounts
 
-Create a MongoDB database user and allow the development machine or hosted backend in Atlas Network Access. On first use, BOON creates a unique index for user emails and an index for each user's recent chats. Sign-up and sign-in use email and password; passwords are salted and hashed on the server. Chat records are scoped to the signed-in account. Guest chats and saved prompts remain in that browser's local storage.
+Create a MongoDB database user and allow the development machine or hosted backend in Atlas Network Access. On first use, BOON creates a unique index for user emails and an index for each user's recent chats. Sign-up and sign-in use email and password; passwords are salted and hashed on the server. Chat records are scoped to the signed-in account. Signed-in users can update their display name, archive and restore chats, move chats to Trash, and permanently delete chats from Trash. Demo chat archives are stored only in that browser's local storage; account-only profile and Trash actions are not available in demo mode.
 
 ## Contact form (Formspree)
 

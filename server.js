@@ -125,7 +125,7 @@ const server = http.createServer(async (req, res) => {
       if (url.pathname.endsWith('signup')) {
         const salt = randomBytes(16).toString('hex')
         const user = { email, salt, passwordHash: await passwordHash(password, salt), createdAt: new Date() }
-        try { user._id = (await users.insertOne(user)).insertedId; return send(res, 201, { token: tokenFor(user), user: { id: String(user._id), email } }) }
+        try { user._id = (await users.insertOne(user)).insertedId; return send(res, 201, { token: tokenFor(user), user: { id: String(user._id), email, displayName: '' } }) }
         catch (error) { if (error.code === 11000) return send(res, 409, { error: 'An account with this email already exists.' }); throw error }
       }
       const user = await users.findOne({ email })
@@ -133,7 +133,16 @@ const server = http.createServer(async (req, res) => {
       const candidate = Buffer.from(await passwordHash(password, user.salt), 'hex')
       const stored = Buffer.from(user.passwordHash, 'hex')
       if (candidate.length !== stored.length || !timingSafeEqual(candidate, stored)) return send(res, 401, { error: 'Email or password is incorrect.' })
-      return send(res, 200, { token: tokenFor(user), user: { id: String(user._id), email } })
+      return send(res, 200, { token: tokenFor(user), user: { id: String(user._id), email, displayName: user.displayName || '' } })
+    }
+    if (req.method === 'PATCH' && url.pathname === '/api/profile') {
+      const user = currentUser(req)
+      if (!user) return send(res, 401, { error: 'Sign in to update your profile.' })
+      const { displayName: rawDisplayName } = await readBody(req)
+      const displayName = typeof rawDisplayName === 'string' ? rawDisplayName.trim() : ''
+      if (!displayName || displayName.length > 60) return send(res, 400, { error: 'Enter a profile name with 1 to 60 characters.' })
+      await (await getDb()).collection('users').updateOne({ email: user.email }, { $set: { displayName } })
+      return send(res, 200, { displayName })
     }
     if (url.pathname.startsWith('/api/chats')) {
       const user = currentUser(req)
@@ -142,13 +151,22 @@ const server = http.createServer(async (req, res) => {
       const id = decodeURIComponent(url.pathname.split('/').pop() || '')
       if (req.method === 'GET' && url.pathname === '/api/chats') {
         const documents = await chats.find({ userId: user.id }).sort({ updatedAt: -1 }).limit(100).toArray()
-        return send(res, 200, { chats: documents.map(({ _id, userId, ...chat }) => ({ id: _id, ...chat })) })
+        return send(res, 200, { chats: documents.map(({ _id, userId, ...chat }) => ({ id: _id, status: 'active', ...chat })) })
       }
       if (req.method === 'PUT' && id) {
         const body = await readBody(req)
         const cleanId = id.slice(0, 128)
-        await chats.updateOne({ _id: cleanId, userId: user.id }, { $set: { userId: user.id, title: String(body.title || 'New chat').slice(0, 160), messages: Array.isArray(body.messages) ? body.messages.slice(-200) : [], updatedAt: new Date() } }, { upsert: true })
+        const update = { $set: { userId: user.id, title: String(body.title || 'New chat').slice(0, 160), messages: Array.isArray(body.messages) ? body.messages.slice(-200) : [], updatedAt: new Date() }, $setOnInsert: { status: 'active' } }
+        if (['active', 'archived', 'trash'].includes(body.status)) update.$set.status = body.status
+        await chats.updateOne({ _id: cleanId, userId: user.id }, update, { upsert: true })
         return send(res, 200, { id: cleanId })
+      }
+      if (req.method === 'PATCH' && id) {
+        const { status } = await readBody(req)
+        if (!['active', 'archived', 'trash'].includes(status)) return send(res, 400, { error: 'Choose active, archived, or trash.' })
+        const result = await chats.updateOne({ _id: id, userId: user.id }, { $set: { status, updatedAt: new Date() } })
+        if (!result.matchedCount) return send(res, 404, { error: 'Chat not found.' })
+        return send(res, 200, { ok: true })
       }
       if (req.method === 'DELETE' && id) { await chats.deleteOne({ _id: id, userId: user.id }); return send(res, 200, { ok: true }) }
       return send(res, 405, { error: 'Method not allowed.' })
