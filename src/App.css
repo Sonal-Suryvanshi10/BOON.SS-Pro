@@ -672,3 +672,14 @@
 .message.user{justify-content:flex-end}
 .message.user .message-main{order:1}
 .message.user .message-avatar{order:2}
+.app-shell,.app-shell .main-panel,.app-shell .conversation{background:#08090b}
+.app-shell .message-list{width:min(calc(100% - 32px),900px);margin:20px auto 16px}
+.app-shell .message{gap:10px;margin-bottom:18px}
+.app-shell .message.user .message-main{display:flex;flex:0 1 88%;flex-direction:column;align-items:flex-end;max-width:88%;margin:0;padding:0;border:0;background:transparent}
+.app-shell .message.user .message-content{width:100%;padding:9px 12px;border:1px solid #232428;border-radius:4px 12px 12px;background:#0d0e10}
+.app-shell .message.user .message-heading{margin-bottom:5px}
+.app-shell .message-tools{gap:4px;margin-top:6px}
+.app-shell .message-tools button{width:28px;height:28px;justify-content:center;padding:0;border-radius:7px}
+.app-shell .composer-area{background:linear-gradient(0deg,#08090b 63%,#08090bcc 84%,transparent)}
+.app-shell .composer{background:#0d0e10;border-color:#292a2e}
+.app-shell .composer:focus-within{border-color:#c5a6ff80;box-shadow:0 0 0 3px #c5a6ff20,0 8px 30px #000000aa}

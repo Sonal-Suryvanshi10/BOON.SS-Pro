@@ -513,36 +513,38 @@ function Message({ message, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, 
         {isAssistant ? <Icon name="spark" size={15} /> : 'S'}
       </div>
       <div className="message-main">
-        <div className="message-heading">
-          <b>{isAssistant ? 'BOON.SS' : 'You'}</b>
-          <span>{message.error ? 'Server issue' : 'Just now'}</span>
+        <div className={`message-content ${isAssistant ? '' : 'user-question'}`}>
+          <div className="message-heading">
+            <b>{isAssistant ? 'BOON.SS' : 'You'}</b>
+            <span>{message.error ? 'Server issue' : 'Just now'}</span>
+          </div>
+          {editing ? <div className="message-edit"><textarea value={editValue} onChange={event => setEditValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); saveEdit() } if (event.key === 'Escape') cancelEdit() }} autoFocus /><div><button onClick={cancelEdit} aria-label="Cancel editing" title="Cancel editing"><Icon name="close" size={14}/></button><button onClick={saveEdit} aria-label="Save and regenerate" title="Save and regenerate"><Icon name="check" size={14}/></button></div></div> : <div className={`message-text ${message.error ? 'error-text' : ''}`}>{renderText(message.text || '')}</div>}
         </div>
-        {editing ? <div className="message-edit"><textarea value={editValue} onChange={event => setEditValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); saveEdit() } if (event.key === 'Escape') cancelEdit() }} autoFocus /><div><button onClick={cancelEdit}><Icon name="close" size={14}/> Cancel</button><button onClick={saveEdit}><Icon name="check" size={14}/> Save & regenerate</button></div></div> : <div className={`message-text ${message.error ? 'error-text' : ''}`}>{renderText(message.text || '')}</div>}
 
         {isAssistant && message.text && (
           <div className="message-tools">
-            <button onClick={() => onCopy(message.text)}>
-              <Icon name="copy" size={14} /> Copy
+            <button onClick={() => onCopy(message.text)} aria-label="Copy response" title="Copy response">
+              <Icon name="copy" size={14}/>
             </button>
-            <button onClick={() => onSpeak(message.text)}>
-              <Icon name={speaking ? 'mute' : 'volume'} size={14} /> {speaking ? 'Stop' : 'Read aloud'}
+            <button onClick={() => onSpeak(message.text)} aria-label={speaking ? 'Stop reading aloud' : 'Read response aloud'} title={speaking ? 'Stop reading aloud' : 'Read response aloud'}>
+              <Icon name={speaking ? 'mute' : 'volume'} size={14}/>
             </button>
-            <button onClick={() => onShare(message.text)}>
-              <Icon name="share" size={14} /> Share
+            <button onClick={() => onShare(message.text)} aria-label="Share response" title="Share response">
+              <Icon name="share" size={14}/>
             </button>
-            <button onClick={onRegenerate}>
-              <Icon name="refresh" size={14} /> Regenerate
+            <button onClick={onRegenerate} aria-label="Regenerate response" title="Regenerate response">
+              <Icon name="refresh" size={14}/>
             </button>
           </div>
         )}
         {!isAssistant && (
           <div className="message-tools">
-            <button onClick={() => onSave(message.apiText || message.text)}>
-              <Icon name="book" size={14} /> Save prompt
+            <button onClick={() => onSave(message.apiText || message.text)} aria-label="Save prompt" title="Save prompt">
+              <Icon name="book" size={14}/>
             </button>
-            <button onClick={() => onEdit(message.apiText || message.text, message)}><Icon name="edit" size={14} /> Edit & retry</button>
-            <button onClick={onDelete}>
-              <Icon name="trash" size={14} /> Delete
+            <button onClick={() => onEdit(message.apiText || message.text, message)} aria-label="Edit question" title="Edit question"><Icon name="edit" size={14}/></button>
+            <button onClick={onDelete} aria-label="Delete message" title="Delete message">
+              <Icon name="trash" size={14}/>
             </button>
           </div>
         )}
