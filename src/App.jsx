@@ -144,7 +144,7 @@ function Sidebar({
       {drawer && (
         <button
           className="scrim"
-          onClick={() => setDrawer(false)}
+          onClick={() => { setDrawer(false); setProfileMenuOpen(false) }}
           aria-label="Close menu"
         />
       )}
@@ -168,7 +168,7 @@ function Sidebar({
           </a>
           <button
             className="plain-icon close-drawer"
-            onClick={() => setDrawer(false)}
+            onClick={() => { setDrawer(false); setProfileMenuOpen(false) }}
             aria-label="Close sidebar"
           >
             <Icon name="close" />
@@ -502,7 +502,7 @@ function Landing({ onDemo, onLogin, onProfile, isAuthenticated }) {
   )
 }
 
-function Message({ message, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editing, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate }) {
+function Message({ message, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editing, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate }) {
   const isAssistant = message.role === 'assistant'
 
   return (
@@ -530,8 +530,8 @@ function Message({ message, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, o
             <button onClick={() => onShare(message.text)}>
               <Icon name="share" size={14} /> Share
             </button>
-            <button onClick={onRetry}>
-              <Icon name="refresh" size={14} /> Try again
+            <button onClick={onRegenerate}>
+              <Icon name="refresh" size={14} /> Regenerate
             </button>
           </div>
         )}
@@ -546,7 +546,6 @@ function Message({ message, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, o
             </button>
           </div>
         )}
-        {isAssistant && message.text && <div className="message-tools"><button onClick={onRegenerate}><Icon name="refresh" size={14}/> Regenerate</button></div>}
       </div>
     </article>
   )
@@ -573,7 +572,7 @@ function ThinkingIndicator() {
   )
 }
 
-function Conversation({ messages, busy, bottom, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editingId, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate, onSelectPrompt }) {
+function Conversation({ messages, busy, bottom, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editingId, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate, onSelectPrompt }) {
   const isEmpty = messages.length === 0
 
   return (
@@ -587,7 +586,6 @@ function Conversation({ messages, busy, bottom, onCopy, onRetry, onSave, onSpeak
               key={`${index}-${message.role}`}
               message={message}
               onCopy={onCopy}
-              onRetry={onRetry}
               onSave={onSave}
               onSpeak={onSpeak}
               onShare={onShare}
@@ -900,6 +898,7 @@ export default function App() {
     setActiveSessionId(session.id)
     setMessages(session.messages)
     setDrawer(false)
+    setProfileMenuOpen(false)
   }
 
   async function setSessionStatus(session, status) {
@@ -1319,14 +1318,6 @@ export default function App() {
     />
   }
 
-  function retryLastPrompt() {
-    const lastPrompt = messages
-      .filter((message) => message.role === 'user')
-      .at(-1)
-      ?.text?.split('\n[Attached:')[0]
-    submit(lastPrompt || '')
-  }
-
   if (showLanding) return <><Landing isAuthenticated={Boolean(auth?.token)} onDemo={(prompt) => { setMessages([]); setActiveSessionId(null); setInput(prompt || ''); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onProfile={openProfileFromLanding} onLogin={() => openAuthDialog('signin')} />{authOpen && renderAuthDialog()}</>
 
   return (
@@ -1369,7 +1360,6 @@ export default function App() {
           onDemo={(prompt) => { if (prompt) setInput(prompt); setMessages([]); setActiveSessionId(null); requestAnimationFrame(() => inputRef.current?.focus()) }}
           onLogin={() => openAuthDialog('signin')}
           onCopy={copy}
-          onRetry={retryLastPrompt}
           onSave={savePrompt}
           onSpeak={readAloud}
           onShare={shareReply}

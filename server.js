@@ -3,6 +3,7 @@ import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from 'node:util'
 import { MongoClient } from 'mongodb'
 import { GoogleGenAI } from '@google/genai'
+import { systemPrompt } from './src/AskAi.js'
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -96,8 +97,6 @@ function currentUser(req) {
   try { const data = JSON.parse(Buffer.from(payload, 'base64url').toString()); return data.exp > Date.now() ? { id: data.uid, email: data.email } : null } catch { return null }
 }
 async function passwordHash(password, salt) { return (await scrypt(password, salt, 64)).toString('hex') }
-const systemPrompt = `You are BOON.SS, created by and founded by Sonal Suryvanshi. If asked who made, founded, or created you, answer clearly that your founder is Sonal Suryvanshi. Match the user's language: reply in English to English, and natural Hinglish (Roman script) to Hindi/Hinglish. Be warm, concise, and useful. Format answers clearly in Markdown.`
-
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
   try {

@@ -668,3 +668,7 @@
 @media(prefers-reduced-motion:reduce){
   .earth-map,.earth-clouds,.reference-landing .earth-planet{animation:none!important}
 }
+
+.message.user{justify-content:flex-end}
+.message.user .message-main{order:1}
+.message.user .message-avatar{order:2}
