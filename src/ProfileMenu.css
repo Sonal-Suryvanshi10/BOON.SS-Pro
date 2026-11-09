@@ -22,6 +22,31 @@
 .header-action svg{color:#b8a5f4}
 .profile-name-card{max-width:390px}
 .profile-name-card h2{margin-top:14px}
+.new-chat{margin-bottom:18px}
+.side-label.recents-label{margin-top:6px}
+.boon-auth-overlay,.app-shell .boon-auth-overlay{background:radial-gradient(ellipse at 50% 45%,#202e45e8,#080e18ed 75%);backdrop-filter:blur(12px)}
+.boon-auth-card,.app-shell .boon-auth-card{width:min(100%,430px);max-height:calc(100dvh - 28px);overflow-y:auto;gap:14px;padding:25px 30px 27px;border-radius:23px;background:radial-gradient(ellipse at 50% 10%,#51477a 0%,transparent 43%),linear-gradient(155deg,#253344,#151f2b 72%);border:1px solid #c5a6ff58}
+.boon-auth-card h2,.app-shell .boon-auth-card h2{margin:0;text-align:center;color:#f1f0f8;font:700 25px/1.2 Manrope,sans-serif;letter-spacing:-.8px}
+.boon-auth-card>p,.app-shell .boon-auth-card>p{margin:0 7px 3px;text-align:center;color:#c0cada;font-size:11px;line-height:1.65}
+.boon-auth-card label,.app-shell .boon-auth-card label{gap:7px;color:#c0cada;font-size:10px}
+.boon-auth-card input,.app-shell .boon-auth-card input{width:100%;padding:12px 13px;border:1px solid #b9c3d12b;border-radius:10px;background:#111b25;color:#f1f0f8;font-size:12px}
+.boon-auth-card input:focus,.app-shell .boon-auth-card input:focus{border-color:#c5a6ff;box-shadow:0 0 0 3px #c5a6ff20}
+.password-input-wrap{position:relative}
+.password-input-wrap input{padding-right:44px!important}
+.password-visibility{position:absolute;top:50%;right:7px;display:grid;place-items:center;width:32px;height:32px;transform:translateY(-50%);border:0;border-radius:7px;background:transparent;color:#aab6c8;cursor:pointer}
+.password-visibility:hover{background:#c5a6ff18;color:#eee9ff}
+.password-visibility:focus-visible{outline:2px solid #c5a6ff;outline-offset:1px}
+.boon-auth-card .auth-switch,.app-shell .boon-auth-card .auth-switch{color:#c5a6ff}
+.boon-auth-card .auth-kicker,.app-shell .boon-auth-card .auth-kicker{color:#c5a6ff}
+.boon-auth-card .auth-close,.app-shell .boon-auth-card .auth-close{color:#f1f0f8}
+.boon-auth-card .auth-core,.app-shell .boon-auth-card .auth-core{background:linear-gradient(145deg,#c5a6ff,#6554b5);border-color:#e4d4ff8a;box-shadow:0 0 35px #c5a6ff69,inset 0 1px #ffffff9e}
+.boon-auth-card .auth-orbit,.app-shell .boon-auth-card .auth-orbit{border-color:#c5a6ff69}
+.boon-auth-card .auth-orbit-two,.app-shell .boon-auth-card .auth-orbit-two{border-color:#83e4d15c}
+.boon-auth-card .auth-star-one,.app-shell .boon-auth-card .auth-star-one{color:#d5bd6c}
+.boon-auth-card .auth-star-two,.app-shell .boon-auth-card .auth-star-two{color:#83e4d1}
+@media(max-width:560px){
+  .boon-auth-card,.app-shell .boon-auth-card{width:min(100%,430px);padding:22px 20px 24px}
+}
 @keyframes profile-menu-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:560px){
   .top-actions{gap:6px}

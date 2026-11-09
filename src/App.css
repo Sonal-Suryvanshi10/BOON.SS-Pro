@@ -151,7 +151,7 @@
 .landing-hero{grid-template-columns:minmax(0,1.08fr) minmax(280px,.92fr);gap:clamp(18px,4vw,70px);min-height:calc(100dvh - 72px);padding:56px clamp(36px,8vw,130px) 72px}
 .landing-copy .eyebrow{border-color:#b7c8a327;background:#d9e2d00b;color:#d4be91}
 .landing-copy .eyebrow span{background:#e2bf8c;box-shadow:0 0 12px #dfb67c99}
-.landing-copy h1{font-size:clamp(66px,8.5vw,124px);background:linear-gradient(105deg,#f3eee1 8%,#dce4d5 76%,#e6c19a);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.landing-copy h1{font-size:clamp(56px,7vw,100px);white-space:nowrap;background:linear-gradient(105deg,#f3eee1 8%,#dce4d5 76%,#e6c19a);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .landing-copy h2{color:#b4c1b6;font-size:clamp(10px,1vw,13px);letter-spacing:clamp(1.7px,.35vw,4px)}
 .landing-copy h2 i{color:#e49a88}
 .landing-intro{max-width:455px;color:#b1beb3;font-size:clamp(13px,1.25vw,16px)}

@@ -118,14 +118,16 @@ const server = http.createServer(async (req, res) => {
       return res.end()
     }
     if (req.method === 'POST' && ['/api/auth/signup', '/api/auth/signin'].includes(url.pathname)) {
-      const { email: rawEmail, password } = await readBody(req)
+      const { email: rawEmail, password, displayName: rawDisplayName } = await readBody(req)
       const email = String(rawEmail || '').trim().toLowerCase()
       if (!email.includes('@') || email.length > 254 || typeof password !== 'string' || password.length < 8 || password.length > 256) return send(res, 400, { error: 'Enter a valid email and a password with at least 8 characters.' })
       const users = (await getDb()).collection('users')
       if (url.pathname.endsWith('signup')) {
+        const displayName = typeof rawDisplayName === 'string' ? rawDisplayName.trim() : ''
+        if (!displayName || displayName.length > 60) return send(res, 400, { error: 'Enter your name with 1 to 60 characters.' })
         const salt = randomBytes(16).toString('hex')
-        const user = { email, salt, passwordHash: await passwordHash(password, salt), createdAt: new Date() }
-        try { user._id = (await users.insertOne(user)).insertedId; return send(res, 201, { token: tokenFor(user), user: { id: String(user._id), email, displayName: '' } }) }
+        const user = { email, displayName, salt, passwordHash: await passwordHash(password, salt), createdAt: new Date() }
+        try { user._id = (await users.insertOne(user)).insertedId; return send(res, 201, { token: tokenFor(user), user: { id: String(user._id), email, displayName } }) }
         catch (error) { if (error.code === 11000) return send(res, 409, { error: 'An account with this email already exists.' }); throw error }
       }
       const user = await users.findOne({ email })

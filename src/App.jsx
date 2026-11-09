@@ -17,6 +17,9 @@ import {
   Mic,
   MoreHorizontal,
   LogOut,
+  Eye,
+  EyeOff,
+  Plus,
   Paperclip,
   RefreshCw,
   Volume2,
@@ -183,6 +186,11 @@ function Sidebar({
           />
           <kbd>⌘ /</kbd>
         </label>
+
+        <button className="new-chat" onClick={newChat}>
+          <Plus size={17} aria-hidden="true" />
+          <span>New conversation</span>
+        </button>
 
         <div className="side-label">YOUR SPACE</div>
         <button className="side-link" onClick={newChat}>
@@ -407,7 +415,7 @@ function Landing({ onDemo, onLogin, onProfile, isAuthenticated }) {
         <section className="landing-hero" id="home" data-landing-section>
           <div className="landing-copy">
             <div className="eyebrow"><span/> ✦ NEXT-GEN AI ASSISTANT</div>
-            <h1>BOON.SS</h1>
+            <h1>BOON.SS Pro</h1>
             <h2>BIG IDEAS. <i>✦</i> BRIGHTER POSSIBILITIES.</h2>
             <p className="landing-intro">A thoughtful space to explore ideas, make sense of the complicated, and turn “what if?” into “what next?”</p>
             <div className="welcome-actions">
@@ -700,6 +708,62 @@ function Composer({
   )
 }
 
+function AuthDialog({
+  authMode,
+  setAuthMode,
+  onClose,
+  onSubmit,
+  authBusy,
+  authError,
+  authDisplayName,
+  setAuthDisplayName,
+  authEmail,
+  setAuthEmail,
+  authPassword,
+  setAuthPassword,
+  confirmPassword,
+  setConfirmPassword,
+  showPassword,
+  setShowPassword,
+  showConfirmPassword,
+  setShowConfirmPassword,
+  setAuthError,
+}) {
+  const isSignup = authMode === 'signup'
+  return (
+    <div className="auth-overlay boon-auth-overlay" onClick={onClose}>
+      <form className="auth-card boon-auth-card" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
+        <button type="button" className="auth-close" aria-label="Close" onClick={onClose}>×</button>
+        <div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div>
+        <div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div>
+        <h2>{isSignup ? 'Make room for more ideas.' : 'Welcome back.'}</h2>
+        <p>{isSignup ? 'Create your BOON.SS account and keep your conversations close, wherever inspiration finds you.' : 'Sign in to pick up right where your curiosity left off.'}</p>
+        {isSignup && <>
+          <label htmlFor="auth-display-name">Your name</label>
+          <input id="auth-display-name" name="displayName" type="text" autoComplete="name" maxLength="60" placeholder="Enter your name" required value={authDisplayName} onChange={(event) => setAuthDisplayName(event.target.value)} />
+        </>}
+        <label htmlFor="auth-email">Email</label>
+        <input id="auth-email" name="email" type="email" autoComplete="email" placeholder="Enter your email" required value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} />
+        <label htmlFor="auth-password">Password</label>
+        <div className="password-input-wrap">
+          <input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete={isSignup ? 'new-password' : 'current-password'} placeholder="Enter your password" minLength="8" required value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} />
+          <button type="button" className="password-visibility" aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? <EyeOff size={17}/> : <Eye size={17}/>}</button>
+        </div>
+        {isSignup && <>
+          <label htmlFor="auth-confirm-password">Confirm password</label>
+          <div className="password-input-wrap">
+            <input id="auth-confirm-password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Confirm your password" minLength="8" required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+            <button type="button" className="password-visibility" aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} title={showConfirmPassword ? 'Hide password' : 'Show password'} onClick={() => setShowConfirmPassword((visible) => !visible)}>{showConfirmPassword ? <EyeOff size={17}/> : <Eye size={17}/>}</button>
+          </div>
+        </>}
+        {authError && <div className="auth-error">{authError}</div>}
+        <button className="auth-submit" disabled={authBusy}>{authBusy ? 'Please wait…' : isSignup ? 'Create my account  ↗' : 'Sign in  ↗'}</button>
+        <button type="button" className="auth-switch" onClick={() => { setAuthMode(isSignup ? 'signin' : 'signup'); setAuthError(''); setAuthPassword(''); setConfirmPassword(''); setShowPassword(false); setShowConfirmPassword(false) }}>{isSignup ? 'Already have an account? Sign in' : 'New here? Create an account'}</button>
+      </form>
+    </div>
+  )
+}
+
 export default function App() {
   const [messages, setMessages] = useState([])
   const [showLanding, setShowLanding] = useState(true)
@@ -730,8 +794,12 @@ export default function App() {
   const [profileNameError, setProfileNameError] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
+  const [authDisplayName, setAuthDisplayName] = useState('')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [authError, setAuthError] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -977,7 +1045,7 @@ export default function App() {
   async function submit(text = input) {
     const prompt = text.trim() || (imageAttachment ? 'Describe this image.' : '')
     if (!prompt || busy) return
-    if (!auth && guestUsage >= 7) { setAuthError('Aapke 7 free demo messages complete ho gaye. Continue karne ke liye signup ya login karein.'); setAuthMode('signup'); setAuthOpen(true); return }
+    if (!auth && guestUsage >= 7) { openAuthDialog('signup'); setAuthError('Aapke 7 free demo messages complete ho gaye. Continue karne ke liye signup ya login karein.'); return }
     if (!activeSessionId) setActiveSessionId(String(Date.now()))
 
     const sentAttachment = attachment
@@ -1195,19 +1263,60 @@ export default function App() {
   function onKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      if (!auth && guestUsage >= 7) { setAuthError('Aapke 7 free demo messages complete ho gaye. Continue karne ke liye signup ya login karein.'); setAuthMode('signup'); setAuthOpen(true) } else submit()
+      if (!auth && guestUsage >= 7) { openAuthDialog('signup'); setAuthError('Aapke 7 free demo messages complete ho gaye. Continue karne ke liye signup ya login karein.') } else submit()
     }
   }
 
   async function handleAuth(event) {
-    event.preventDefault(); setAuthBusy(true); setAuthError('')
+    event.preventDefault()
+    if (authMode === 'signup') {
+      if (authPassword !== confirmPassword) { setAuthError('Passwords do not match.'); return }
+      if (!authDisplayName.trim()) { setAuthError('Enter your name to create an account.'); return }
+    }
+    setAuthBusy(true); setAuthError('')
     try {
-      const response = await fetch(`/api/auth/${authMode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: authEmail, password: authPassword }) })
+      const body = { email: authEmail, password: authPassword }
+      if (authMode === 'signup') body.displayName = authDisplayName.trim()
+      const response = await fetch(`/api/auth/${authMode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not sign in')
-      setAuth(result); setSessions([]); setSessionView('active'); setProfileMenuOpen(false); setAuthOpen(false); setAuthPassword(''); setMessages([]); setActiveSessionId(null); showToast('Cloud chat sync is on')
+      setAuth(result); setSessions([]); setSessionView('active'); setProfileMenuOpen(false); setAuthOpen(false); setAuthPassword(''); setConfirmPassword(''); setMessages([]); setActiveSessionId(null); showToast('Cloud chat sync is on')
       setGuestUsage(0); localStorage.removeItem('boon-guest-usage')
     } catch (error) { setAuthError(error.message) } finally { setAuthBusy(false) }
+  }
+
+  function openAuthDialog(mode = 'signin') {
+    setAuthMode(mode)
+    setAuthError('')
+    setAuthPassword('')
+    setConfirmPassword('')
+    setShowPassword(false)
+    setShowConfirmPassword(false)
+    setAuthOpen(true)
+  }
+
+  function renderAuthDialog() {
+    return <AuthDialog
+      authMode={authMode}
+      setAuthMode={setAuthMode}
+      onClose={() => setAuthOpen(false)}
+      onSubmit={handleAuth}
+      authBusy={authBusy}
+      authError={authError}
+      authDisplayName={authDisplayName}
+      setAuthDisplayName={setAuthDisplayName}
+      authEmail={authEmail}
+      setAuthEmail={setAuthEmail}
+      authPassword={authPassword}
+      setAuthPassword={setAuthPassword}
+      confirmPassword={confirmPassword}
+      setConfirmPassword={setConfirmPassword}
+      showPassword={showPassword}
+      setShowPassword={setShowPassword}
+      showConfirmPassword={showConfirmPassword}
+      setShowConfirmPassword={setShowConfirmPassword}
+      setAuthError={setAuthError}
+    />
   }
 
   function retryLastPrompt() {
@@ -1218,7 +1327,7 @@ export default function App() {
     submit(lastPrompt || '')
   }
 
-  if (showLanding) return <><Landing isAuthenticated={Boolean(auth?.token)} onDemo={(prompt) => { setMessages([]); setActiveSessionId(null); setInput(prompt || ''); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onProfile={openProfileFromLanding} onLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }} />{authOpen && <div className="auth-overlay" onClick={() => setAuthOpen(false)}><form className="auth-card" onSubmit={handleAuth} onClick={event => event.stopPropagation()}><button type="button" className="auth-close" aria-label="Close" onClick={()=>setAuthOpen(false)}>×</button><div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div><div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div><h2>{authMode==='signup'?'Make room for more ideas.':'Welcome back.'}</h2><p>{authMode==='signup'?'Create your BOON.SS account and keep your conversations close.':'Sign in to pick up right where your curiosity left off.'}</p><label htmlFor="landing-email">Email</label><input id="landing-email" name="email" type="email" autoComplete="email" required value={authEmail} onChange={event=>setAuthEmail(event.target.value)}/><label htmlFor="landing-password">Password</label><input id="landing-password" name="password" type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="8" required value={authPassword} onChange={event=>setAuthPassword(event.target.value)}/>{authError&&<div className="auth-error">{authError}</div>}<button className="auth-submit" disabled={authBusy}>{authBusy?'Please wait…':authMode==='signup'?'Create my account ↗':'Sign in ↗'}</button><button type="button" className="auth-switch" onClick={()=>{setAuthMode(authMode==='signin'?'signup':'signin');setAuthError('')}}>{authMode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button></form></div>}</>
+  if (showLanding) return <><Landing isAuthenticated={Boolean(auth?.token)} onDemo={(prompt) => { setMessages([]); setActiveSessionId(null); setInput(prompt || ''); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onProfile={openProfileFromLanding} onLogin={() => openAuthDialog('signin')} />{authOpen && renderAuthDialog()}</>
 
   return (
     <div className="app-shell" onKeyDownCapture={shortcut}>
@@ -1246,7 +1355,7 @@ export default function App() {
         onLogout={logout}
         onGoHome={goToHome}
         onEditProfile={openProfileNameEditor}
-        onOpenLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }}
+        onOpenLogin={() => openAuthDialog('signin')}
         submit={submit}
         authUser={auth?.user}
       />
@@ -1258,7 +1367,7 @@ export default function App() {
           busy={busy}
           bottom={bottom}
           onDemo={(prompt) => { if (prompt) setInput(prompt); setMessages([]); setActiveSessionId(null); requestAnimationFrame(() => inputRef.current?.focus()) }}
-          onLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }}
+          onLogin={() => openAuthDialog('signin')}
           onCopy={copy}
           onRetry={retryLastPrompt}
           onSave={savePrompt}
@@ -1304,22 +1413,7 @@ export default function App() {
         </div>
       )}
 
-      {authOpen && (
-        <div className="auth-overlay" onClick={() => setAuthOpen(false)}>
-          <form className="auth-card" onSubmit={handleAuth} onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="auth-close" onClick={() => setAuthOpen(false)}>×</button>
-            <div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div>
-            <div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div>
-            <h2>{authMode === 'signup' ? 'Make room for more ideas.' : 'Welcome back.'}</h2>
-            <p>{authMode === 'signup' ? 'Create your BOON.SS account and keep your conversations close, wherever inspiration finds you.' : 'Sign in to pick up right where your curiosity left off.'}</p>
-            <label htmlFor="auth-email">Email</label><input id="auth-email" name="email" type="email" autoComplete="email" required value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} />
-            <label htmlFor="auth-password">Password</label><input id="auth-password" name="password" type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength="8" required value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} />
-            {authError && <div className="auth-error">{authError}</div>}
-            <button className="auth-submit" disabled={authBusy}>{authBusy ? 'Please wait…' : authMode === 'signup' ? 'Create my account  ↗' : 'Sign in  ↗'}</button>
-            <button type="button" className="auth-switch" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError('') }}>{authMode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}</button>
-          </form>
-        </div>
-      )}
+      {authOpen && renderAuthDialog()}
       {toast && (
         <div className="toast">
           <Icon name="check" size={15} />

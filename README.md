@@ -22,7 +22,7 @@ BOON.SS Pro is a responsive AI co-pilot for brainstorming, learning, and turning
 
 ### Accounts and chat history
 
-- Email and password sign-up/sign-in backed by MongoDB
+- Email and password sign-up/sign-in with a display name, backed by MongoDB
 - Signed session tokens retained across page refreshes
 - Account-specific, searchable cloud chat history
 - Archive and restore conversations
