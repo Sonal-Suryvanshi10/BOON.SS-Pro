@@ -8,7 +8,8 @@ import {
   Cpu,
   Mail,
   Home as HomeIcon,
-  Orbit,
+  BriefcaseBusiness,
+  Code2,
   Rocket,
   Menu,
   Mic,
@@ -263,18 +264,174 @@ function Header({ messages, chatTitle, setDrawer }) {
   )
 }
 
-function Welcome() {
+function Welcome({ onSelectPrompt }) {
   return (
     <div className="welcome">
       <div className="hero-orb" aria-hidden="true"><div className="orbit orbit-a"/><div className="orbit orbit-b"/><div className="orbit orbit-c"/><div className="planet"><span className="planet-shine"/><span className="planet-star">✦</span><span className="planet-glint"/></div><i className="satellite sat-a"/><i className="satellite sat-b"/><i className="satellite sat-c"/></div>
       <div className="eyebrow"><span/>YOUR IMAGINATION, MEET YOUR CO-PILOT<span/></div><h1>What You Want ?<br/><em>Ask Here</em></h1><p className="welcome-copy">Ideas, answers, and the occasional “what if…”<br className="desktop-only"/> Start anywhere. We’ll figure it out together.</p>
-      <div className="suggestions">{[{icon:'✦',title:'Explore an idea',text:'Give me three creative ideas for a weekend project.'},{icon:'⌁',title:'Write something',text:'Write a tiny story about a city floating above the clouds.'},{icon:'◈',title:'Learn something',text:'Explain how the internet works in simple words.'}].map(s=><button className="suggestion" key={s.title} onClick={()=>document.querySelector('.composer textarea')?.focus()}><span className="suggestion-icon">{s.icon}</span><span><b>{s.title}</b><small>{s.text}</small></span><span className="suggestion-arrow">↗</span></button>)}</div>
+      <div className="suggestions">{[{icon:'✦',title:'Explore an idea',text:'Give me three creative ideas for a weekend project.'},{icon:'⌁',title:'Write something',text:'Write a tiny story about a city floating above the clouds.'},{icon:'◈',title:'Learn something',text:'Explain how the internet works in simple words.'}].map(s=><button className="suggestion" key={s.title} onClick={()=>onSelectPrompt(s.text)}><span className="suggestion-icon">{s.icon}</span><span><b>{s.title}</b><small>{s.text}</small></span><span className="suggestion-arrow">↗</span></button>)}</div>
     </div>
   )
 }
 
 function Landing({ onDemo, onLogin }) {
-  return <div className="reference-landing"><nav className="landing-nav"><a className="active"><HomeIcon size={17}/> HOME</a><a><Compass size={17}/> EXPLORE</a><a><Cpu size={17}/> TECHNOLOGY</a><a><BookOpen size={17}/> JOURNAL</a><a><Mail size={17}/> CONTACT</a><span>BY &nbsp;<b>SONAL</b></span></nav><main className="landing-hero"><div className="landing-copy"><div className="eyebrow"><span/> ✦ NEXT-GEN AI ASSISTANT</div><h1>BOON.SS</h1><h2>WHERE CREATIVITY <i>✦</i> MEETS INTELLIGENCE</h2><div className="welcome-actions"><button className="demo-button" onClick={onDemo}>▷ &nbsp; TRY DEMO &nbsp;→</button><button className="welcome-login" onClick={onLogin}>⇥ &nbsp; LOGIN / SIGN UP</button></div><div className="landing-stats"><span><b>∞</b><small>IDEAS</small></span><span><b>24/7</b><small>AVAILABLE</small></span><span><b>100+</b><small>LANGUAGES</small></span></div></div><div className="landing-cosmos" aria-hidden="true"><div className="cosmos-ring ring-one"/><div className="cosmos-ring ring-two"/><div className="cosmos-ring ring-three"/><div className="cosmos-planet"><div className="planet-core"><Orbit size={48}/></div></div><span className="cosmos-moon"/><Rocket className="cosmos-rocket" size={25}/><Rocket className="cosmos-rocket rocket-two" size={22}/><span className="cosmos-spark">✦</span></div></main><div className="landing-foot">✦ &nbsp; BOON.SS · YOUR LITTLE SPARK OF GENIUS</div></div>
+  const [activeSection, setActiveSection] = useState('home')
+  const [contactStatus, setContactStatus] = useState({ type: '', message: '' })
+  const [contactBusy, setContactBusy] = useState(false)
+  const landingRef = useRef(null)
+  const navItems = [
+    { id: 'home', label: 'HOME', Icon: HomeIcon },
+    { id: 'explore', label: 'EXPLORE', Icon: Compass },
+    { id: 'technology', label: 'TECHNOLOGY', Icon: Cpu },
+    { id: 'journal', label: 'JOURNAL', Icon: BookOpen },
+    { id: 'contact', label: 'CONTACT', Icon: Mail },
+  ]
+  const ideas = [
+    { category: 'CREATE', title: 'Make something memorable', description: 'Turn a rough idea into a story, a plan, or a fresh creative direction.', prompt: 'Give me three original ideas for a creative project I can finish this weekend.' },
+    { category: 'UNDERSTAND', title: 'Make the complex feel simple', description: 'Get a clear explanation, a useful analogy, and the next question to explore.', prompt: 'Explain a complex topic to me using a simple analogy, then suggest one thing I can explore next.' },
+    { category: 'GET UNSTUCK', title: 'Find your next step', description: 'Break a big goal into small, practical actions you can start today.', prompt: 'Help me break a goal I have in mind into five small steps I can start today.' },
+  ]
+  const journalItems = [
+    { number: '01', tag: 'A BETTER BRAINSTORM', title: 'Start with a constraint', description: 'A small limit can make a blank page easier. Add a time limit, an audience, or a single material.', prompt: 'Help me brainstorm 10 ideas for a small project. Keep each idea under one sentence and make them varied.' },
+    { number: '02', tag: 'LEARN BY ASKING', title: 'Ask for the second explanation', description: 'If an explanation does not click, ask for a different analogy or a worked example.', prompt: 'Teach me a topic using a relatable analogy, then give me a small worked example to check my understanding.' },
+    { number: '03', tag: 'MAKE IT ACTIONABLE', title: 'Turn notes into a next step', description: 'A useful summary ends with what to do next, not just what was said.', prompt: 'Give me a simple framework to turn a messy list of notes into three clear next actions.' },
+  ]
+
+  function navigateToSection(event, id) {
+    event.preventDefault()
+    setActiveSection(id)
+    landingRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function submitContact(event) {
+    event.preventDefault()
+    setContactBusy(true)
+    setContactStatus({ type: '', message: '' })
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(formData.entries())),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Your message could not be sent.')
+      form.reset()
+      setContactStatus({
+        type: 'success',
+        message: result.autoReplySent
+          ? 'Message sent! A thank-you email is on its way to your inbox.'
+          : 'Message sent! Thank you for reaching out.',
+      })
+    } catch (error) {
+      setContactStatus({ type: 'error', message: error.message || 'Your message could not be sent. Please try again.' })
+    } finally {
+      setContactBusy(false)
+    }
+  }
+
+  return (
+    <div className="reference-landing" data-active-section={activeSection} ref={landingRef}>
+      <nav className="landing-nav" aria-label="Main navigation">
+        <div className="landing-nav-links">
+          {navItems.map(({ id, label, Icon }) => (
+            <a key={id} href={`#${id}`} className={activeSection === id ? 'active' : ''} aria-current={activeSection === id ? 'page' : undefined} onClick={(event) => navigateToSection(event, id)}>
+              <Icon size={17} /> {label}
+            </a>
+          ))}
+        </div>
+        <span className="landing-byline">BY &nbsp;<b>SONAL</b></span>
+      </nav>
+
+      <main>
+        <section className="landing-hero" id="home" data-landing-section>
+          <div className="landing-copy">
+            <div className="eyebrow"><span/> ✦ NEXT-GEN AI ASSISTANT</div>
+            <h1>BOON.SS</h1>
+            <h2>WHERE CREATIVITY <i>✦</i> MEETS INTELLIGENCE</h2>
+            <p className="landing-intro">A thoughtful space to explore ideas, make sense of the complicated, and turn “what if?” into “what next?”</p>
+            <div className="welcome-actions">
+              <button className="demo-button" onClick={() => onDemo()}>▷ &nbsp; TRY DEMO &nbsp;→</button>
+              <button className="welcome-login" onClick={onLogin}>⇥ &nbsp; LOGIN / SIGN UP</button>
+            </div>
+            <div className="landing-stats"><span><b>∞</b><small>IDEAS TO EXPLORE</small></span><span><b>1:1</b><small>THOUGHTFUL CHAT</small></span><span><b>YOU</b><small>SET THE PACE</small></span></div>
+          </div>
+          <div className="landing-cosmos" aria-hidden="true">
+            <div className="cosmos-backglow"/>
+            <div className="cosmos-ring ring-one"/>
+            <div className="cosmos-ring ring-two"/>
+            <div className="cosmos-ring ring-three"/>
+            <div className="cosmos-planet earth-planet">
+              <div className="earth-map"/>
+              <div className="earth-graticule"/>
+              <div className="earth-clouds"/>
+              <div className="earth-specular"/>
+              <div className="earth-shadow"/>
+            </div>
+            <span className="cosmos-moon"/>
+            <Rocket className="cosmos-rocket" size={25}/>
+            <Rocket className="cosmos-rocket rocket-two" size={22}/>
+            <span className="cosmos-spark">✦</span>
+            <div className="cosmos-float-card orbit-label"><span className="float-icon"><Sparkles size={15}/></span><span><b>IDEA UNIVERSE</b><small>One thought can travel far</small></span><i/></div>
+            <div className="cosmos-float-card orbit-status"><span className="status-pulse"/><span><b>READY WHEN YOU ARE</b><small>Your creative co-pilot</small></span></div>
+            <div className="cosmos-orbit-dot dot-one"/><div className="cosmos-orbit-dot dot-two"/><div className="cosmos-orbit-dot dot-three"/>
+          </div>
+        </section>
+
+        <section className="landing-section explore-section" id="explore" data-landing-section>
+          <div className="landing-section-heading"><span className="landing-kicker">A LITTLE SPARK GOES A LONG WAY</span><h2>What would you like to <em>make possible?</em></h2><p>Choose a starting point. Each idea opens the assistant with a prompt you can shape your own way.</p></div>
+          <div className="idea-grid">{ideas.map((idea) => <article className="idea-card" key={idea.title}><span className="idea-category">{idea.category}</span><div className="idea-card-mark"><Sparkles size={20}/></div><h3>{idea.title}</h3><p>{idea.description}</p><button onClick={() => onDemo(idea.prompt)}>TRY THIS IDEA <ArrowUpRight size={15}/></button></article>)}</div>
+        </section>
+
+        <section className="landing-section technology-section" id="technology" data-landing-section>
+          <div className="landing-section-heading"><span className="landing-kicker">BUILT FOR CURIOUS MINDS</span><h2>Powerful tools, <em>kept simple.</em></h2><p>BOON.SS brings a few useful capabilities together in one calm, focused workspace.</p></div>
+          <div className="technology-grid">
+            <article className="technology-card"><span className="technology-icon"><Sparkles size={20}/></span><div><h3>Helpful AI conversations</h3><p>Get streamed responses powered by Gemini, with room to refine your question and explore follow-ups.</p></div><span className="technology-index">01</span></article>
+            <article className="technology-card"><span className="technology-icon"><Paperclip size={20}/></span><div><h3>Work with your material</h3><p>Attach supported text files or an image to give your prompt useful context.</p></div><span className="technology-index">02</span></article>
+            <article className="technology-card"><span className="technology-icon"><Mic size={20}/></span><div><h3>Speak and listen</h3><p>Use your browser’s speech recognition to dictate and read assistant replies aloud.</p></div><span className="technology-index">03</span></article>
+            <article className="technology-card"><span className="technology-icon"><BookOpen size={20}/></span><div><h3>Keep your ideas close</h3><p>Save useful prompts locally, and sign in to sync conversation history to your account.</p></div><span className="technology-index">04</span></article>
+          </div>
+          <p className="technology-note">Voice input depends on browser support, microphone permission, and an internet connection.</p>
+        </section>
+
+        <section className="landing-section journal-section" id="journal" data-landing-section>
+          <div className="landing-section-heading"><span className="landing-kicker">FIELD NOTES FOR YOUR NEXT IDEA</span><h2>Small ways to get <em>unstuck.</em></h2><p>Try one of these practical starting points, then make it yours in chat.</p></div>
+          <div className="journal-grid">{journalItems.map((item) => <article className="journal-card" key={item.number}><span className="journal-number">{item.number}</span><div><span className="idea-category">{item.tag}</span><h3>{item.title}</h3><p>{item.description}</p><button onClick={() => onDemo(item.prompt)}>EXPLORE THIS NOTE <ArrowUpRight size={15}/></button></div></article>)}</div>
+        </section>
+
+        <section className="landing-contact" id="contact" data-landing-section>
+          <div className="contact-layout">
+            <div className="contact-intro">
+              <span className="landing-kicker">LET’S MAKE A CONNECTION</span>
+              <h2>Have an idea?<br/><em>Let’s talk.</em></h2>
+              <p>Have a project, opportunity, or just want to say hello? Send a note and I’ll get back to you.</p>
+              <a className="contact-email" href="mailto:sonalsuryvanshi@95gmail.com"><Mail size={17}/> sonalsuryvanshi@95gmail.com <ArrowUpRight size={15}/></a>
+              <div className="contact-socials">
+                <span>FIND ME ELSEWHERE</span>
+                <a href="https://www.linkedin.com/in/sonal-suryvanshi-45a400335" target="_blank" rel="noreferrer" aria-label="Sonal Suryvanshi on LinkedIn"><BriefcaseBusiness size={18}/><span>LinkedIn</span><ArrowUpRight size={14}/></a>
+                <a href="https://github.com/Sonal-Suryvanshi10" target="_blank" rel="noreferrer" aria-label="Sonal Suryvanshi on GitHub"><Code2 size={18}/><span>GitHub</span><ArrowUpRight size={14}/></a>
+              </div>
+            </div>
+            <form className="contact-form" onSubmit={submitContact}>
+              <div className="contact-form-heading"><span>DROP A NOTE</span><small>Fields marked * are required</small></div>
+              <div className="contact-form-row">
+                <label>Your name *<input name="name" autoComplete="name" maxLength="100" placeholder="How should I call you?" required/></label>
+                <label>Email address *<input name="email" type="email" autoComplete="email" maxLength="254" placeholder="you@example.com" required/></label>
+              </div>
+              <label>Subject<input name="subject" maxLength="160" placeholder="What would you like to discuss?"/></label>
+              <label>Your message *<textarea name="message" rows="5" maxLength="5000" placeholder="Tell me a little about it…" required/></label>
+              <label className="contact-honeypot" aria-hidden="true">Leave this field empty<input name="website" tabIndex="-1" autoComplete="off"/></label>
+              {contactStatus.message && <p className={`contact-feedback ${contactStatus.type}`} role="status">{contactStatus.message}</p>}
+              <button className="contact-submit" type="submit" disabled={contactBusy}>{contactBusy ? 'SENDING…' : 'SEND MESSAGE'} <Send size={16}/></button>
+              <small className="contact-auto-reply">A thank-you note will be sent to your email after submission.</small>
+            </form>
+          </div>
+        </section>
+      </main>
+      <div className="landing-foot">✦ &nbsp; BOON.SS · YOUR LITTLE SPARK OF GENIUS</div>
+    </div>
+  )
 }
 
 function Message({ message, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editing, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate }) {
@@ -348,13 +505,13 @@ function ThinkingIndicator() {
   )
 }
 
-function Conversation({ messages, busy, bottom, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editingId, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate }) {
+function Conversation({ messages, busy, bottom, onCopy, onRetry, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editingId, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate, onSelectPrompt }) {
   const isEmpty = messages.length === 0
 
   return (
     <section className={`conversation ${isEmpty ? 'empty-conversation' : ''}`}>
       {isEmpty ? (
-        <Welcome/>
+        <Welcome onSelectPrompt={onSelectPrompt}/>
       ) : (
         <div className="message-list">
           {messages.map((message, index) => (
@@ -449,6 +606,7 @@ function Composer({
             </div>
 
             <div className="composer-tools">
+              {listening && <span className="mic-status" role="status">Listening…</span>}
               <button
                 className={`attach mic ${listening ? 'listening' : ''}`}
                 aria-label={listening ? 'Stop voice input' : 'Start voice input'}
@@ -456,7 +614,7 @@ function Composer({
                 aria-pressed={listening}
                 onClick={onVoiceInput}
               >
-                <Icon name="mic" size={17} />
+                <Icon name={listening ? 'stop' : 'mic'} size={17} />
               </button>
               {busy ? (
                 <button className="send send-ready" onClick={onStop} aria-label="Stop generating" title="Stop generating">
@@ -521,10 +679,14 @@ export default function App() {
   const bottom = useRef(null)
   const fileRef = useRef(null)
   const recognitionRef = useRef(null)
+  const voiceBaseRef = useRef('')
+  const voiceFinalRef = useRef('')
+  const voiceAutoSendRef = useRef(false)
   const requestController = useRef(null)
 
   useEffect(
     () => () => {
+      voiceAutoSendRef.current = false
       recognitionRef.current?.abort()
       recognitionRef.current = null
     },
@@ -693,29 +855,34 @@ export default function App() {
     try {
       const recognition = new Speech()
       recognitionRef.current = recognition
-      recognition.lang = navigator.language || 'en-US'
+      voiceBaseRef.current = input
+      voiceFinalRef.current = ''
+      voiceAutoSendRef.current = true
+      recognition.lang = navigator.languages?.[0] || navigator.language || 'en-US'
       recognition.continuous = false
-      recognition.interimResults = false
+      recognition.interimResults = true
       recognition.maxAlternatives = 1
       recognition.onstart = () => {
         setListening(true)
-        showToast('Listening... tap the mic to stop', 2500)
+        showToast('Listening… your message sends when you finish speaking', 2800)
       }
       recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .slice(event.resultIndex)
-          .filter((result) => result.isFinal)
-          .map((result) => result[0].transcript.trim())
-          .filter(Boolean)
-          .join(' ')
-
-        if (transcript) {
-          setInput((current) =>
-            `${current}${current ? ' ' : ''}${transcript}`,
-          )
+        let interimTranscript = ''
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+          const result = event.results[index]
+          const transcript = result[0]?.transcript?.trim()
+          if (!transcript) continue
+          if (result.isFinal) {
+            voiceFinalRef.current = [voiceFinalRef.current, transcript].filter(Boolean).join(' ')
+          } else {
+            interimTranscript = [interimTranscript, transcript].filter(Boolean).join(' ')
+          }
         }
+        const transcript = [voiceFinalRef.current, interimTranscript].filter(Boolean).join(' ')
+        setInput([voiceBaseRef.current, transcript].filter(Boolean).join(voiceBaseRef.current && transcript ? ' ' : ''))
       }
       recognition.onerror = (event) => {
+        voiceAutoSendRef.current = false
         const messages = {
           'not-allowed': 'Allow microphone access in browser settings',
           'service-not-allowed': 'Speech recognition service is unavailable',
@@ -726,11 +893,18 @@ export default function App() {
         showToast(messages[event.error] || 'Voice input could not start')
       }
       recognition.onend = () => {
+        const transcript = voiceFinalRef.current
+        const prompt = [voiceBaseRef.current, transcript].filter(Boolean).join(voiceBaseRef.current && transcript ? ' ' : '')
+        const shouldSend = voiceAutoSendRef.current && Boolean(transcript)
+        voiceAutoSendRef.current = false
+        if (transcript) setInput(prompt)
         recognitionRef.current = null
         setListening(false)
+        if (shouldSend) void submit(prompt)
       }
       recognition.start()
     } catch {
+      voiceAutoSendRef.current = false
       recognitionRef.current = null
       setListening(false)
       showToast('Could not start microphone. Check its browser permission')
@@ -840,7 +1014,7 @@ export default function App() {
     submit(lastPrompt || '')
   }
 
-  if (showLanding) return <><Landing onDemo={() => { setMessages([]); setActiveSessionId(null); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }} />{authOpen && <div className="auth-overlay" onClick={() => setAuthOpen(false)}><form className="auth-card" onSubmit={handleAuth} onClick={event => event.stopPropagation()}><button type="button" className="auth-close" aria-label="Close" onClick={()=>setAuthOpen(false)}>×</button><div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div><div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div><h2>{authMode==='signup'?'Make room for more ideas.':'Welcome back.'}</h2><p>{authMode==='signup'?'Create your BOON.SS account and keep your conversations close.':'Sign in to pick up right where your curiosity left off.'}</p><label htmlFor="landing-email">Email</label><input id="landing-email" name="email" type="email" autoComplete="email" required value={authEmail} onChange={event=>setAuthEmail(event.target.value)}/><label htmlFor="landing-password">Password</label><input id="landing-password" name="password" type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="8" required value={authPassword} onChange={event=>setAuthPassword(event.target.value)}/>{authError&&<div className="auth-error">{authError}</div>}<button className="auth-submit" disabled={authBusy}>{authBusy?'Please wait…':authMode==='signup'?'Create my account ↗':'Sign in ↗'}</button><button type="button" className="auth-switch" onClick={()=>{setAuthMode(authMode==='signin'?'signup':'signin');setAuthError('')}}>{authMode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button></form></div>}</>
+  if (showLanding) return <><Landing onDemo={(prompt) => { setMessages([]); setActiveSessionId(null); setInput(prompt || ''); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }} />{authOpen && <div className="auth-overlay" onClick={() => setAuthOpen(false)}><form className="auth-card" onSubmit={handleAuth} onClick={event => event.stopPropagation()}><button type="button" className="auth-close" aria-label="Close" onClick={()=>setAuthOpen(false)}>×</button><div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div><div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div><h2>{authMode==='signup'?'Make room for more ideas.':'Welcome back.'}</h2><p>{authMode==='signup'?'Create your BOON.SS account and keep your conversations close.':'Sign in to pick up right where your curiosity left off.'}</p><label htmlFor="landing-email">Email</label><input id="landing-email" name="email" type="email" autoComplete="email" required value={authEmail} onChange={event=>setAuthEmail(event.target.value)}/><label htmlFor="landing-password">Password</label><input id="landing-password" name="password" type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="8" required value={authPassword} onChange={event=>setAuthPassword(event.target.value)}/>{authError&&<div className="auth-error">{authError}</div>}<button className="auth-submit" disabled={authBusy}>{authBusy?'Please wait…':authMode==='signup'?'Create my account ↗':'Sign in ↗'}</button><button type="button" className="auth-switch" onClick={()=>{setAuthMode(authMode==='signin'?'signup':'signin');setAuthError('')}}>{authMode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button></form></div>}</>
 
   return (
     <div className="app-shell" onKeyDownCapture={shortcut}>
@@ -877,6 +1051,7 @@ export default function App() {
           onDelete={deleteMessage}
           speaking={speaking}
           editingId={editingId ? messages.findIndex(message => message.id === editingId) : messages.indexOf(editingMessage)} editValue={editValue} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => { setEditingMessage(null); setEditingId(null) }} onRegenerate={regenerate}
+          onSelectPrompt={(prompt) => { setInput(prompt); inputRef.current?.focus() }}
         />
         <Composer
           area={area}

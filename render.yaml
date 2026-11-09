@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: boon-ss-pro
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: boon
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CONTACT_FROM_EMAIL
+        sync: false
