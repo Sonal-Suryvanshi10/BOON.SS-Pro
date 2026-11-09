@@ -139,6 +139,17 @@ function Sidebar({
   submit,
   authUser,
 }) {
+  const sidebarFooterRef = useRef(null)
+
+  useEffect(() => {
+    if (!profileMenuOpen) return
+    const closeOnOutsideClick = (event) => {
+      if (!sidebarFooterRef.current?.contains(event.target)) setProfileMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick)
+  }, [profileMenuOpen, setProfileMenuOpen])
+
   return (
     <>
       {drawer && (
@@ -255,7 +266,7 @@ function Sidebar({
           )}
         </div>
 
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" ref={sidebarFooterRef}>
           <div className="plan-card">
             <span className="plan-icon">
               <Icon name="spark" size={15} />
@@ -292,7 +303,7 @@ function Sidebar({
   )
 }
 
-function Header({ messages, chatTitle, setDrawer, onArchive, onGoHome, canArchiveCurrent }) {
+function Header({ setDrawer, onGoHome }) {
   return (
     <header className="topbar">
       <div className="top-left">
@@ -309,12 +320,10 @@ function Header({ messages, chatTitle, setDrawer, onArchive, onGoHome, canArchiv
           </span>
           BOON.SS
         </span>
-        <span className="crumb">{messages.length ? chatTitle : 'New conversation'}</span>
       </div>
 
       <div className="top-actions">
         <button className="header-action" onClick={onGoHome} title="Go to home page"><HomeIcon size={15}/><span>Home</span></button>
-        {canArchiveCurrent && <button className="header-action" onClick={onArchive} title="Archive this chat"><Archive size={15}/><span>Archive</span></button>}
         <span className="online">
           <i />
           Ready to explore
@@ -989,7 +998,7 @@ export default function App() {
   function openProfileFromLanding() {
     setShowLanding(false)
     setDrawer(true)
-    setProfileMenuOpen(true)
+    setProfileMenuOpen(false)
   }
 
   function openProfileNameEditor() {
@@ -1354,7 +1363,7 @@ export default function App() {
       />
 
       <main className="main-panel">
-        <Header messages={messages} chatTitle={chatTitle} setDrawer={setDrawer} onArchive={archiveCurrentChat} onGoHome={goToHome} canArchiveCurrent={Boolean(auth?.token && messages.length)} />
+        <Header setDrawer={setDrawer} onGoHome={goToHome} />
         <Conversation
           messages={messages}
           busy={busy}
