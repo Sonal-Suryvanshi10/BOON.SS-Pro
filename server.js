@@ -21,8 +21,6 @@ const dbName = process.env.MONGODB_DB || 'boon'
 const sessionSecret = process.env.SESSION_SECRET
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null
 const maxBody = 8 * 1024 * 1024
-const contactInbox = 'sonalsuryvanshi@95gmail.com'
-const contactRateLimits = new Map()
 const distDirectory = resolve(dirname(fileURLToPath(import.meta.url)), 'dist')
 let mongoClient
 let database
@@ -40,42 +38,6 @@ async function getDb() {
 function send(res, status, payload) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
   res.end(JSON.stringify(payload))
-}
-function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, character => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[character])
-}
-function checkContactRateLimit(address) {
-  const now = Date.now()
-  const current = contactRateLimits.get(address)
-  if (current && current.expiresAt > now && current.count >= 5) return false
-  if (!current || current.expiresAt <= now) contactRateLimits.set(address, { count: 1, expiresAt: now + 10 * 60 * 1000 })
-  else current.count += 1
-  if (contactRateLimits.size > 1000) {
-    for (const [key, entry] of contactRateLimits) if (entry.expiresAt <= now) contactRateLimits.delete(key)
-  }
-  return true
-}
-async function sendContactEmail(message) {
-  if (!process.env.RESEND_API_KEY || !process.env.CONTACT_FROM_EMAIL) {
-    throw new Error('Contact email is not configured. Set RESEND_API_KEY and CONTACT_FROM_EMAIL.')
-  }
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(message),
-    signal: AbortSignal.timeout(10000),
-  })
-  const result = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    console.error('Contact email provider returned an error:', response.status)
-    throw new Error('Email provider could not deliver the message.')
-  }
-  return result
 }
 function serveFrontend(req, res, pathname) {
   if (!['GET', 'HEAD'].includes(req.method) || !existsSync(distDirectory)) return false
@@ -140,49 +102,6 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
   try {
     if (req.method === 'GET' && url.pathname === '/api/health') return send(res, 200, { ok: true, mongoConfigured: Boolean(mongoUri), aiConfigured: Boolean(ai) })
-    if (req.method === 'POST' && url.pathname === '/api/contact') {
-      const address = req.socket.remoteAddress || 'unknown'
-      if (!checkContactRateLimit(address)) {
-        res.setHeader('Retry-After', '600')
-        return send(res, 429, { error: 'Too many messages were sent. Please try again in a few minutes.' })
-      }
-      const body = await readBody(req)
-      if (!body || typeof body !== 'object' || Array.isArray(body)) return send(res, 400, { error: 'Contact details are required.' })
-      if (typeof body.website === 'string' && body.website.trim()) return send(res, 200, { ok: true, autoReplySent: false })
-      const name = typeof body.name === 'string' ? body.name.trim() : ''
-      const email = typeof body.email === 'string' ? body.email.trim() : ''
-      const subject = typeof body.subject === 'string' ? body.subject.trim() : ''
-      const message = typeof body.message === 'string' ? body.message.trim() : ''
-      if (!name || name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || subject.length > 160 || !message || message.length > 5000) {
-        return send(res, 400, { error: 'Enter a valid name, email address, and message (up to 5,000 characters).' })
-      }
-      const safeName = escapeHtml(name)
-      const safeEmail = escapeHtml(email)
-      const safeSubject = escapeHtml(subject || 'New portfolio contact')
-      const safeMessage = escapeHtml(message)
-      const ownerMail = {
-        from: process.env.CONTACT_FROM_EMAIL,
-        to: [contactInbox],
-        reply_to: email,
-        subject: `Portfolio contact: ${subject || `message from ${name}`}`.slice(0, 200),
-        text: `New portfolio contact\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject || '(not provided)'}\n\nMessage:\n${message}`,
-        html: `<h2>New portfolio contact</h2><p><strong>Name:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p><p><strong>Subject:</strong> ${safeSubject}</p><p><strong>Message:</strong></p><p>${safeMessage.replace(/\r?\n/g, '<br>')}</p>`,
-      }
-      const acknowledgementMail = {
-        from: process.env.CONTACT_FROM_EMAIL,
-        to: [email],
-        subject: 'Thank you for reaching out to Sonal',
-        text: `Hi ${name},\n\nThank you for reaching out! Your message has been received. Sonal will get back to you as soon as possible.\n\nBest,\nSonal`,
-        html: `<p>Hi ${safeName},</p><p>Thank you for reaching out! Your message has been received. Sonal will get back to you as soon as possible.</p><p>Best,<br>Sonal</p>`,
-      }
-      const [ownerResult, acknowledgementResult] = await Promise.allSettled([
-        sendContactEmail(ownerMail),
-        sendContactEmail(acknowledgementMail),
-      ])
-      if (ownerResult.status === 'rejected') return send(res, 502, { error: 'Your message could not be delivered. Please try again or email directly.' })
-      if (acknowledgementResult.status === 'rejected') console.error('Contact acknowledgement email could not be delivered.')
-      return send(res, 200, { ok: true, autoReplySent: acknowledgementResult.status === 'fulfilled' })
-    }
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       if (!ai) return send(res, 503, { error: 'AI service is not configured. Add GEMINI_API_KEY to .env.' })
       const { messages = [], image } = await readBody(req)

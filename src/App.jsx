@@ -310,19 +310,26 @@ function Landing({ onDemo, onLogin }) {
     const form = event.currentTarget
     const formData = new FormData(form)
     try {
-      const response = await fetch('/api/contact', {
+      const endpoint = import.meta.env.VITE_FORMSPREE_ENDPOINT?.trim()
+      if (!endpoint || !/^https:\/\/formspree\.io\/f\/[A-Za-z0-9]+\/?$/.test(endpoint)) {
+        throw new Error('Add your Formspree endpoint to VITE_FORMSPREE_ENDPOINT, then restart the app.')
+      }
+      const data = Object.fromEntries(formData.entries())
+      data._subject = `Portfolio contact: ${data.subject || data.name}`
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(formData.entries())),
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Your message could not be sent.')
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const providerError = result.errors?.map((error) => error.message).filter(Boolean).join(' ')
+        throw new Error(providerError || 'Formspree could not send your message. Please try again.')
+      }
       form.reset()
       setContactStatus({
         type: 'success',
-        message: result.autoReplySent
-          ? 'Message sent! A thank-you email is on its way to your inbox.'
-          : 'Message sent! Thank you for reaching out.',
+        message: 'Message sent! Thanks for reaching out — I’ll get back to you soon.',
       })
     } catch (error) {
       setContactStatus({ type: 'error', message: error.message || 'Your message could not be sent. Please try again.' })
@@ -421,10 +428,10 @@ function Landing({ onDemo, onLogin }) {
               </div>
               <label>Subject<input name="subject" maxLength="160" placeholder="What would you like to discuss?"/></label>
               <label>Your message *<textarea name="message" rows="5" maxLength="5000" placeholder="Tell me a little about it…" required/></label>
-              <label className="contact-honeypot" aria-hidden="true">Leave this field empty<input name="website" tabIndex="-1" autoComplete="off"/></label>
+              <label className="contact-honeypot" aria-hidden="true">Leave this field empty<input name="_gotcha" tabIndex="-1" autoComplete="off"/></label>
               {contactStatus.message && <p className={`contact-feedback ${contactStatus.type}`} role="status">{contactStatus.message}</p>}
               <button className="contact-submit" type="submit" disabled={contactBusy}>{contactBusy ? 'SENDING…' : 'SEND MESSAGE'} <Send size={16}/></button>
-              <small className="contact-auto-reply">A thank-you note will be sent to your email after submission.</small>
+              <small className="contact-auto-reply">Your message is delivered privately. Your phone number is never shown on this page.</small>
             </form>
           </div>
         </section>

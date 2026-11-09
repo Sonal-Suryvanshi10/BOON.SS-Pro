@@ -19,7 +19,5 @@ services:
         value: boon
       - key: SESSION_SECRET
         generateValue: true
-      - key: RESEND_API_KEY
-        sync: false
-      - key: CONTACT_FROM_EMAIL
+      - key: VITE_FORMSPREE_ENDPOINT
         sync: false
