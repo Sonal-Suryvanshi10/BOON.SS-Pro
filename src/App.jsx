@@ -18,7 +18,6 @@ import {
   MoreHorizontal,
   LogOut,
   Paperclip,
-  Plus,
   RefreshCw,
   Volume2,
   VolumeX,
@@ -38,7 +37,6 @@ import askAi from './AskAi.js'
 
 const icons = {
   menu: Menu,
-  plus: Plus,
   search: Search,
   send: Send,
   clip: Paperclip,
@@ -174,12 +172,6 @@ function Sidebar({
           </button>
         </div>
 
-        <button className="new-chat" onClick={newChat}>
-          <Icon name="plus" />
-          <span>New conversation</span>
-          <kbd>⌘ K</kbd>
-        </button>
-
         <label className="search-row">
           <Icon name="search" />
           <input
@@ -275,14 +267,15 @@ function Sidebar({
           </div>
           {profileMenuOpen && (
             <div className="profile-menu" role="menu">
-              {canArchiveCurrent && <button role="menuitem" onClick={onArchiveCurrent}><Archive size={15}/> Archive current chat</button>}
-              <button role="menuitem" onClick={() => { setSessionView(sessionView === 'archived' ? 'active' : 'archived'); setProfileMenuOpen(false); setShowSaved(false) }}><ArchiveRestore size={15}/>{sessionView === 'archived' ? 'Recent chats' : 'Archived chats'}</button>
+              {authUser && canArchiveCurrent && <button role="menuitem" onClick={onArchiveCurrent}><Archive size={15}/> Archive current chat</button>}
+              {authUser && <button role="menuitem" onClick={() => { setSessionView(sessionView === 'archived' ? 'active' : 'archived'); setProfileMenuOpen(false); setShowSaved(false) }}><ArchiveRestore size={15}/>{sessionView === 'archived' ? 'Recent chats' : 'Archived chats'}</button>}
               {authUser && <>
                 <button role="menuitem" onClick={onEditProfile}><Pencil size={15}/> Update display name</button>
                 <button role="menuitem" onClick={() => { setSessionView(sessionView === 'trash' ? 'active' : 'trash'); setProfileMenuOpen(false); setShowSaved(false) }}><Trash2 size={15}/>{sessionView === 'trash' ? 'Recent chats' : 'Trash'}</button>
                 <button role="menuitem" onClick={onGoHome}><HomeIcon size={15}/> Go to home page</button>
                 <button role="menuitem" className="profile-menu-danger" onClick={onLogout}><LogOut size={15}/> Log out</button>
               </>}
+              {!authUser && <button role="menuitem" onClick={() => { setProfileMenuOpen(false); onOpenLogin() }}><ArrowUpRight size={15}/> Sign in to save chats</button>}
             </div>
           )}
         </div>
@@ -333,7 +326,7 @@ function Welcome({ onSelectPrompt }) {
   )
 }
 
-function Landing({ onDemo, onLogin }) {
+function Landing({ onDemo, onLogin, onProfile, isAuthenticated }) {
   const [activeSection, setActiveSection] = useState('home')
   const [contactStatus, setContactStatus] = useState({ type: '', message: '' })
   const [contactBusy, setContactBusy] = useState(false)
@@ -415,11 +408,12 @@ function Landing({ onDemo, onLogin }) {
           <div className="landing-copy">
             <div className="eyebrow"><span/> ✦ NEXT-GEN AI ASSISTANT</div>
             <h1>BOON.SS</h1>
-            <h2>WHERE CREATIVITY <i>✦</i> MEETS INTELLIGENCE</h2>
+            <h2>BIG IDEAS. <i>✦</i> BRIGHTER POSSIBILITIES.</h2>
             <p className="landing-intro">A thoughtful space to explore ideas, make sense of the complicated, and turn “what if?” into “what next?”</p>
             <div className="welcome-actions">
-              <button className="demo-button" onClick={() => onDemo()}>▷ &nbsp; TRY DEMO &nbsp;→</button>
-              <button className="welcome-login" onClick={onLogin}>⇥ &nbsp; LOGIN / SIGN UP</button>
+              {isAuthenticated
+                ? <button className="demo-button" onClick={onProfile}><HomeIcon size={16}/> &nbsp; PROFILE &nbsp;→</button>
+                : <><button className="demo-button" onClick={() => onDemo()}>▷ &nbsp; TRY DEMO &nbsp;→</button><button className="welcome-login" onClick={onLogin}>⇥ &nbsp; LOGIN / SIGN UP</button></>}
             </div>
             <div className="landing-stats"><span><b>∞</b><small>IDEAS TO EXPLORE</small></span><span><b>1:1</b><small>THOUGHTFUL CHAT</small></span><span><b>YOU</b><small>SET THE PACE</small></span></div>
           </div>
@@ -860,7 +854,7 @@ export default function App() {
   }
 
   async function archiveCurrentChat() {
-    if (!messages.length) return
+    if (!auth?.token || !messages.length) return
     const id = activeSessionId || String(Date.now())
     const title = messages.find((message) => message.role === 'user')?.text?.split('\n')[0]?.slice(0, 34) || 'New conversation'
     const session = { id, title, messages, status: 'archived' }
@@ -921,6 +915,12 @@ export default function App() {
     setShowLanding(true)
     setDrawer(false)
     setProfileMenuOpen(false)
+  }
+
+  function openProfileFromLanding() {
+    setShowLanding(false)
+    setDrawer(true)
+    setProfileMenuOpen(true)
   }
 
   function openProfileNameEditor() {
@@ -1218,7 +1218,7 @@ export default function App() {
     submit(lastPrompt || '')
   }
 
-  if (showLanding) return <><Landing onDemo={(prompt) => { setMessages([]); setActiveSessionId(null); setInput(prompt || ''); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }} />{authOpen && <div className="auth-overlay" onClick={() => setAuthOpen(false)}><form className="auth-card" onSubmit={handleAuth} onClick={event => event.stopPropagation()}><button type="button" className="auth-close" aria-label="Close" onClick={()=>setAuthOpen(false)}>×</button><div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div><div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div><h2>{authMode==='signup'?'Make room for more ideas.':'Welcome back.'}</h2><p>{authMode==='signup'?'Create your BOON.SS account and keep your conversations close.':'Sign in to pick up right where your curiosity left off.'}</p><label htmlFor="landing-email">Email</label><input id="landing-email" name="email" type="email" autoComplete="email" required value={authEmail} onChange={event=>setAuthEmail(event.target.value)}/><label htmlFor="landing-password">Password</label><input id="landing-password" name="password" type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="8" required value={authPassword} onChange={event=>setAuthPassword(event.target.value)}/>{authError&&<div className="auth-error">{authError}</div>}<button className="auth-submit" disabled={authBusy}>{authBusy?'Please wait…':authMode==='signup'?'Create my account ↗':'Sign in ↗'}</button><button type="button" className="auth-switch" onClick={()=>{setAuthMode(authMode==='signin'?'signup':'signin');setAuthError('')}}>{authMode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button></form></div>}</>
+  if (showLanding) return <><Landing isAuthenticated={Boolean(auth?.token)} onDemo={(prompt) => { setMessages([]); setActiveSessionId(null); setInput(prompt || ''); setShowLanding(false); requestAnimationFrame(() => inputRef.current?.focus()) }} onProfile={openProfileFromLanding} onLogin={() => { setAuthMode('signin'); setAuthError(''); setAuthOpen(true) }} />{authOpen && <div className="auth-overlay" onClick={() => setAuthOpen(false)}><form className="auth-card" onSubmit={handleAuth} onClick={event => event.stopPropagation()}><button type="button" className="auth-close" aria-label="Close" onClick={()=>setAuthOpen(false)}>×</button><div className="auth-visual" aria-hidden="true"><span className="auth-orbit auth-orbit-one"/><span className="auth-orbit auth-orbit-two"/><span className="auth-core"><Icon name="spark" size={27}/></span><span className="auth-star auth-star-one">✦</span><span className="auth-star auth-star-two">✧</span></div><div className="auth-kicker">YOUR IDEAS, AMPLIFIED</div><h2>{authMode==='signup'?'Make room for more ideas.':'Welcome back.'}</h2><p>{authMode==='signup'?'Create your BOON.SS account and keep your conversations close.':'Sign in to pick up right where your curiosity left off.'}</p><label htmlFor="landing-email">Email</label><input id="landing-email" name="email" type="email" autoComplete="email" required value={authEmail} onChange={event=>setAuthEmail(event.target.value)}/><label htmlFor="landing-password">Password</label><input id="landing-password" name="password" type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="8" required value={authPassword} onChange={event=>setAuthPassword(event.target.value)}/>{authError&&<div className="auth-error">{authError}</div>}<button className="auth-submit" disabled={authBusy}>{authBusy?'Please wait…':authMode==='signup'?'Create my account ↗':'Sign in ↗'}</button><button type="button" className="auth-switch" onClick={()=>{setAuthMode(authMode==='signin'?'signup':'signin');setAuthError('')}}>{authMode==='signin'?'New here? Create an account':'Already have an account? Sign in'}</button></form></div>}</>
 
   return (
     <div className="app-shell" onKeyDownCapture={shortcut}>
@@ -1238,7 +1238,7 @@ export default function App() {
         setSessionView={(view) => { setSessionView(view); setProfileMenuOpen(false) }}
         profileMenuOpen={profileMenuOpen}
         setProfileMenuOpen={setProfileMenuOpen}
-        canArchiveCurrent={messages.length > 0}
+        canArchiveCurrent={Boolean(auth?.token && messages.length)}
         onArchiveCurrent={archiveCurrentChat}
         onMoveToTrash={moveSessionToTrash}
         onRestoreSession={restoreSession}
@@ -1252,7 +1252,7 @@ export default function App() {
       />
 
       <main className="main-panel">
-        <Header messages={messages} chatTitle={chatTitle} setDrawer={setDrawer} onArchive={archiveCurrentChat} onGoHome={goToHome} canArchiveCurrent={messages.length > 0} />
+        <Header messages={messages} chatTitle={chatTitle} setDrawer={setDrawer} onArchive={archiveCurrentChat} onGoHome={goToHome} canArchiveCurrent={Boolean(auth?.token && messages.length)} />
         <Conversation
           messages={messages}
           busy={busy}
