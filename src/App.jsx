@@ -511,7 +511,7 @@ function Landing({ onDemo, onLogin, onProfile, isAuthenticated }) {
   )
 }
 
-function Message({ message, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editing, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate }) {
+function Message({ message, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editing, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate, isGenerating }) {
   const isAssistant = message.role === 'assistant'
 
   return (
@@ -525,9 +525,9 @@ function Message({ message, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, 
         <div className={`message-content ${isAssistant ? '' : 'user-question'}`}>
           <div className="message-heading">
             <b>{isAssistant ? 'BOON.SS' : 'You'}</b>
-            <span>{message.error ? 'Server issue' : 'Just now'}</span>
+            <span>{message.error ? 'Server issue' : isGenerating ? 'Thinking' : 'Just now'}</span>
           </div>
-          {editing ? <div className="message-edit"><textarea value={editValue} onChange={event => setEditValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); saveEdit() } if (event.key === 'Escape') cancelEdit() }} autoFocus /><div><button onClick={cancelEdit} aria-label="Cancel editing" title="Cancel editing"><Icon name="close" size={14}/></button><button onClick={saveEdit} aria-label="Save and regenerate" title="Save and regenerate"><Icon name="check" size={14}/></button></div></div> : <div className={`message-text ${message.error ? 'error-text' : ''}`}>{renderText(message.text || '')}</div>}
+          {editing ? <div className="message-edit"><textarea value={editValue} onChange={event => setEditValue(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); saveEdit() } if (event.key === 'Escape') cancelEdit() }} autoFocus /><div><button onClick={cancelEdit} aria-label="Cancel editing" title="Cancel editing"><Icon name="close" size={14}/></button><button onClick={saveEdit} aria-label="Save and regenerate" title="Save and regenerate"><Icon name="check" size={14}/></button></div></div> : message.text ? <div className={`message-text ${message.error ? 'error-text' : ''}`}>{renderText(message.text)}</div> : isGenerating ? <div className="typing"><i/><i/><i/></div> : null}
         </div>
 
         {isAssistant && message.text && (
@@ -562,27 +562,6 @@ function Message({ message, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, 
   )
 }
 
-function ThinkingIndicator() {
-  return (
-    <article className="message assistant">
-      <div className="message-avatar ai-avatar">
-        <Icon name="spark" size={15} />
-      </div>
-      <div className="message-main">
-        <div className="message-heading">
-          <b>BOON.SS</b>
-          <span>Thinking</span>
-        </div>
-        <div className="typing">
-          <i />
-          <i />
-          <i />
-        </div>
-      </div>
-    </article>
-  )
-}
-
 function Conversation({ messages, busy, bottom, onCopy, onSave, onSpeak, onShare, onEdit, onDelete, speaking, editingId, editValue, setEditValue, saveEdit, cancelEdit, onRegenerate, onSelectPrompt }) {
   const isEmpty = messages.length === 0
 
@@ -604,9 +583,9 @@ function Conversation({ messages, busy, bottom, onCopy, onSave, onSpeak, onShare
               onDelete={() => onDelete(index)}
               speaking={speaking}
               editing={editingId === index} editValue={editValue} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={cancelEdit} onRegenerate={() => onRegenerate(index)}
+              isGenerating={busy && index === messages.length - 1 && message.role === 'assistant'}
             />
           ))}
-          {busy && <ThinkingIndicator />}
           <div ref={bottom} />
         </div>
       )}
