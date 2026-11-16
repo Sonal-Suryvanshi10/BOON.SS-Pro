@@ -669,6 +669,24 @@
   .earth-map,.earth-clouds,.reference-landing .earth-planet{animation:none!important}
 }
 
+.reference-landing .landing-section,
+.reference-landing .landing-contact{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 680px;
+}
+.reference-landing .technology-section{contain-intrinsic-size:auto 620px}
+.reference-landing .landing-contact{contain-intrinsic-size:auto 720px}
+@media(max-width:800px){
+  .reference-landing .landing-section,
+  .reference-landing .landing-contact{contain-intrinsic-size:auto 900px}
+  .reference-landing .technology-section{contain-intrinsic-size:auto 1000px}
+  .reference-landing .landing-contact{contain-intrinsic-size:auto 1050px}
+  .reference-landing .landing-cosmos{filter:none}
+  .reference-landing .cosmos-backglow{filter:none;opacity:.65}
+  .reference-landing .cosmos-float-card{backdrop-filter:none;animation:none}
+  .reference-landing .earth-clouds{filter:none}
+}
+
 .message.user{justify-content:flex-end}
 .message.user .message-main{order:1}
 .message.user .message-avatar{order:2}
